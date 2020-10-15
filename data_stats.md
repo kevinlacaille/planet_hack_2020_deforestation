@@ -3,8 +3,8 @@
 
 ## Analysis of Classnames with their English translations
 
-| Classname| Classname (English) | Count of classes |
-| --- | ---- | ---- |
+| Classname| Classname (English) | Count of incidents |
+| --- | ---- | ----:|
 | CICATRIZ_DE_QUEIMADA| scar burned | 34886 |
 | CORTE_SELETIVO | selective cutting | 1 |
 | CS_DESORDENADO | cs cluttered | 1543 |
@@ -19,19 +19,19 @@
 
 ## Count of UF 
 
-|UF |COUNTA of UF |
-| -- | -----|
-| AC	|13086
-| AM	|21313
-| AP	| 362
-| MA	| 5302
-| MT	|39629
-| PA	|72627
-| RO	| 26169
-| RR | 6570
-| TO	|1353
-| *Grand Total* |	186411
 
+| State Name | Code |	Count of incidents |	SUM of AREAMUNKM | AVERAGE of AREAMUNKM |
+| ------ | --- | ----:| ----:| ----:|
+| Acre	|AC |13086 |	1,882.82	| 0.1439 |
+| Amazonas |	AM	|21313 | 6,804.17 | 0.3192 |
+| Amapá	|AP |362 |	153.87 |	0.4251 |
+| Maranhão| MA |	5302 |	6,109.59 |	1.1523 |
+| Mato Grosso |	MT |	39629 |	42,840.92 |	1.0810 |
+| Pará |	PA |	72627 |	36,864.50 |	0.5076 |
+| Rondônia |	RO |	26169	| 6,566.90 |	0.2509 |
+| Roraima |	RR |	6570 |	6,065.89 |	0.9233 |
+| Tocantins |	TO |	1353	| 2,205.39	| 1.6300 |
+|**Grand Total** |  |	186411	|109,494.06 |	0.5874 |
 
 
 ## Visualizing areas of interest 
