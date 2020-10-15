@@ -31,3 +31,11 @@
 | RR | 6570
 | TO	|1353
 | *Grand Total* |	186411
+
+
+
+## Visualizing areas of interest 
+
+[Link to reactive image](https://public.flourish.studio/visualisation/4029198/)
+
+![Deforestation in Brazil](https://github.com/skyprince999/planet_hack_2020_deforestation/blob/main/Deterioration%20in%20Brazil.jpeg)
