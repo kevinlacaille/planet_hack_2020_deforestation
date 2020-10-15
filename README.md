@@ -1,7 +1,7 @@
 # planet_hack_2020_deforestation
 Related Project Pitch: https://github.com/planetlabs-community/planet-hack-2020/issues/64\
 
-# Link to wiki
+# Links to wiki
 Click here for more: 
 * Home https://github.com/kevinlacaille/planet_hack_2020_deforestation/wiki
 * Ground truth data format (DETER spreadsheet) https://github.com/kevinlacaille/planet_hack_2020_deforestation/wiki/Ground-truth-data-format-(DETER-spreadsheet)
