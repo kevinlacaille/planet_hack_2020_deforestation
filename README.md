@@ -12,5 +12,6 @@ Click here for more:
 
 # Exploratory Data Analysis of Ground Truths (DETER-Brasila)
 
-* Jupyter Notebook for EDA [Link](https://github.com/kevinlacaille/planet_hack_2020_deforestation/blob/main/EDA%20on%20DETER%20Ground%20Truths.md)
+* Summary Page for Analysis of ground truth data [Link](https://github.com/kevinlacaille/planet_hack_2020_deforestation/blob/main/EDA%20on%20DETER%20Ground%20Truths.md)
+* Jupyter Notebook for EDA [Link](https://github.com/kevinlacaille/planet_hack_2020_deforestation/blob/main/deter-brasila-complete-eda.ipynb)
 
