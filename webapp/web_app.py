@@ -36,7 +36,8 @@ logging_file_name = app.config['LOGGING_FILE_NAME']
 logging_file_size = app.config['LOGGING_FILE_SIZE']
 logging_file_count = app.config['LOGGING_FILE_COUNT']
 logging_file_level = app.config['LOGGING_FILE_LEVEL']
-csv_file = app.config['DATABASE']
+csv_file = app.config['DATABASE_CSV']
+pkl_file = app.config['DATABASE_PKL']
 
 # configure logging according to user defined settings
 formatter = logging.Formatter(
@@ -98,8 +99,6 @@ def get_coord_list(geo_row):
 
 def get_image_ids(coord_list, earlier_time, later_time):
 
-    app.logger.info('get_image_ids')
-
     json_geometry = {'type': 'Polygon', 'coordinates': [coord_list]}
 
     geometry_filter = {
@@ -158,12 +157,11 @@ def get_image_ids(coord_list, earlier_time, later_time):
 
     image_ids = [feature['id'] for feature in search_result.json()['features']]
 
+    app.logger.info(search_result.status_code)
+
     return image_ids
 
 def get_bands_string(image_ids):
-
-    app.logger.info('get_bands_string')
-
 
     strings = []
     for s in image_ids:
@@ -176,20 +174,15 @@ explore_base_url = 'https://www.planet.com/explorer/#/mode/compare/interval/1%20
 zoom_base = 13.5
 
 def compute_url(row):
-    import pdb
+    # import pdb
     # pdb.set_trace()
-    app.logger.info('compute_url')
     lng_s = "{}".format(row['LONG'])
     lat_s = "{}".format(row['LAT'])
-    app.logger.info(lng_s)
     scene_date_left = row['UNIX_TIMES'][0]
     scene_date_right = row['UNIX_TIMES'][1]
-    app.logger.info(scene_date_left)
     date_left = row['UNIX_TIMES'][2]
     date_right = row['UNIX_TIMES'][3]
-    app.logger.info(date_left)
     band_strings = get_bands_string(get_image_ids(get_coord_list(row['geometry']), date_left, date_right))
-    app.logger.info(band_strings)
     base_url = "{}/{},{}/zoom/{}/dates/{}..{}/geometry/{}/items/{}/comparing/result::PSScene4Band:{},result::PSScene4Band:{}".format(
                                 explore_base_url,lat_s,lng_s,zoom_base,date_left,date_right,row['wkt'],band_strings,scene_date_left,scene_date_right)
     return base_url
@@ -197,35 +190,42 @@ def compute_url(row):
 # load database from csv
 def load_database(input_file=csv_file):
 
-    app.logger.info('1 - Loading CSV')
+    try:
+        brasil_data_buffer_gdf = pd.read_pickle(pkl_file)
+        app.logger.info('Found pickle')
+    except:
+        app.logger.info('1 - Loading CSV')
 
-    brasil_data = pd.read_csv(csv_file, header=0)
-    brasil_data.columns.values[0] = 'id'
+        brasil_data = pd.read_csv(csv_file, header=0)
+        brasil_data.columns.values[0] = 'id'
 
-    app.logger.info('2 - Building dates columns')
+        app.logger.info('2 - Building dates columns')
 
-    # Dates columns
-    brasil_data['VIEW_DATE'] = brasil_data['VIEW_DATE'].apply(lambda row: datetime.datetime.strptime(row, '%Y-%m-%d'))
-    # inserting the UNIX_TIMES (2WeeksPrior, ViewDate) into the dataframe after the VIEW_DATE column
-    brasil_data.insert(4, 'UNIX_TIMES', brasil_data.apply(lambda row: create_times(row['VIEW_DATE']), axis=1))
+        # Dates columns
+        brasil_data['VIEW_DATE'] = brasil_data['VIEW_DATE'].apply(lambda row: datetime.datetime.strptime(row, '%Y-%m-%d'))
+        # inserting the UNIX_TIMES (2WeeksPrior, ViewDate) into the dataframe after the VIEW_DATE column
+        brasil_data.insert(4, 'UNIX_TIMES', brasil_data.apply(lambda row: create_times(row['VIEW_DATE']), axis=1))
 
-    app.logger.info('3a - Building Wkt column - Point geom')
+        app.logger.info('3a - Building Wkt column - Point geom')
 
-    # wkt column
-    geometry = [Point(xy) for xy in zip(brasil_data.LAT, brasil_data.LONG)]
-    brasil_data_gdf = gpd.GeoDataFrame(brasil_data, geometry=geometry)
-    brasil_data_gdf.crs = 'epsg:4326'
+        # wkt column
+        geometry = [Point(xy) for xy in zip(brasil_data.LAT, brasil_data.LONG)]
+        brasil_data_gdf = gpd.GeoDataFrame(brasil_data, geometry=geometry)
+        brasil_data_gdf.crs = 'epsg:4326'
 
-    app.logger.info('3b - Building Wkt column - Buffered geom')
+        app.logger.info('3b - Building Wkt column - Buffered geom')
 
-    brasil_data_buffer_gdf = brasil_data_gdf.apply(create_buffer,axis=1)
-    brasil_data_buffer_gdf.crs = 'epsg:4326'
+        brasil_data_buffer_gdf = brasil_data_gdf.apply(create_buffer,axis=1)
+        brasil_data_buffer_gdf.crs = 'epsg:4326'
 
-    app.logger.info('3c - Building Wkt column - geom to wkt conversion')
+        app.logger.info('3c - Building Wkt column - geom to wkt conversion')
 
-    brasil_data_buffer_gdf['wkt'] = brasil_data_buffer_gdf.apply(lambda row: row.geometry.simplify(0.0005).wkt.replace(' ',''), axis=1)
+        brasil_data_buffer_gdf['wkt'] = brasil_data_buffer_gdf.apply(lambda row: row.geometry.simplify(0.0005).wkt.replace(' ',''), axis=1)
 
-    app.logger.info('4 - Done loading database')
+        app.logger.info('4 - Done loading database')
+
+        brasil_data_buffer_gdf.to_pickle(pkl_file)
+
     return brasil_data_buffer_gdf
 
 brasil_data_buffer_gdf = load_database()
@@ -255,13 +255,8 @@ def api_id():
         return "Error: No id field provided. Please specify an id."
 
     try:
-        print('id= ', id, type(id))
         row = brasil_data_buffer_gdf[brasil_data_buffer_gdf['id']==id].iloc[0]
-        print(row)
-        print(type(row))
-        app.logger.info(row)
         base_url = compute_url(row)
-        app.logger.info(base_url)
     except Exception as e:
         print(e)
         return "Error: Non existing id or unexpected error."
