@@ -42,3 +42,13 @@
 
 ## Large outliers skew the data
 ![](https://github.com/kevinlacaille/planet_hack_2020_deforestation/blob/main/Box-Plot-UF.png)
+
+
+## Alfa-distribution after excluding outliers (AREAMUNKM <10 )
+
+![](https://github.com/kevinlacaille/planet_hack_2020_deforestation/blob/main/alpha_distribution.png)
+
+## Timeseries of AREAMUNKM over time, Large spikes around Aug-Sept
+
+![](https://github.com/kevinlacaille/planet_hack_2020_deforestation/blob/main/TimeSeries.jpeg)
+
