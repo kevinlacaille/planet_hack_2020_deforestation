@@ -10,5 +10,7 @@ Click here for more:
 * Some useful Planet links (APIs & tools) </br> https://github.com/kevinlacaille/planet_hack_2020_deforestation/wiki/Some-useful-Planet-links-(APIs-&-tools)
 * Who is doing what </br> https://github.com/kevinlacaille/planet_hack_2020_deforestation/wiki/Who-is-doing-what
 
-# Data Stats
-https://github.com/kevinlacaille/planet_hack_2020_deforestation/blob/main/data_stats.md
+# Exploratory Data Analysis of Ground Truths (DETER-Brasila)
+
+* Jupyter Notebook for EDA [Link](https://github.com/kevinlacaille/planet_hack_2020_deforestation/blob/main/EDA%20on%20DETER%20Ground%20Truths.md)
+
