@@ -271,7 +271,20 @@ def api_id():
         app.logger.warning(e)
         return "Error: Non existing id or unexpected error."
 
-    return redirect(base_url)
+    # page_content = '<a href="{}">Go</a>'.format(base_url)
+    page_content = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>HTML Meta Tag</title>
+            <meta http-equiv = "refresh" content = "1; url = {}" />
+        </head>
+        <body>
+            <p>Redirecting to another URL</p>
+        </body>
+        </html>
+    """.format(base_url)
+    return (page_content)
 
 ##################
 #                #
