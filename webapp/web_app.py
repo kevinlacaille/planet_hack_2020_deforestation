@@ -59,10 +59,8 @@ def create_times(date, before_weeks=2, after_weeks=4):
     '''
     ## UNIX Conversion ##
     # This standardizes time to UTC
-    try:
-        view_date = calendar.timegm(date.timetuple()) * 1000
-    except:
-        print('problem with view_date')
+    view_date = calendar.timegm(date.timetuple()) * 1000
+
     #view_date = time.mktime(date.timetuple()) * 1000
     before_date = view_date - (seconds_per_week * before_weeks * 1000)
     after_date = view_date + (seconds_per_week * after_weeks * 1000)
@@ -72,6 +70,15 @@ def create_times(date, before_weeks=2, after_weeks=4):
     iso_before_date = datetime.datetime.utcfromtimestamp(before_date/1000).isoformat()+'Z'
 
     return (int(before_date + 86400000), int(after_date - 86400000), iso_before_date, iso_view_date)
+
+def get_time_from_id(image_id):
+    '''
+    This takes in a full image_id (like the kind in the PSScene4Bands)
+    and outputs a Unix timestamp in milliseconds.
+    '''
+    date = datetime.datetime.strptime(image_id[:8], '%Y%m%d')
+    time_in_ms = calendar.timegm(date.timetuple()) * 1000
+    return time_in_ms
 
 deg_to_meters_lat_minus_seven = 110590
 five_km_in_deg = 5000/110590.
@@ -182,9 +189,12 @@ def compute_url(row):
     scene_date_right = row['UNIX_TIMES'][1]
     date_left = row['UNIX_TIMES'][2]
     date_right = row['UNIX_TIMES'][3]
-    band_strings = get_bands_string(get_image_ids(get_coord_list(row['geometry']), date_left, date_right))
+    image_ids = get_image_ids(get_coord_list(row['geometry']), date_left, date_right)
+    conf_date_left = get_time_from_id(image_ids[-1])
+    conf_date_right = get_time_from_id(image_ids[0])
+    band_strings = get_bands_string(image_ids)
     base_url = "{}/{},{}/zoom/{}/dates/{}..{}/geometry/{}/items/{}/comparing/result::PSScene4Band:{},result::PSScene4Band:{}".format(
-                                explore_base_url,lat_s,lng_s,zoom_base,date_left,date_right,row['wkt'],band_strings,scene_date_left,scene_date_right)
+                                explore_base_url,lat_s,lng_s,zoom_base,date_left,date_right,row['wkt'],band_strings,conf_date_left,conf_date_right)
     return base_url
 
 # load database from csv
