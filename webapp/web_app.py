@@ -190,11 +190,11 @@ def compute_url(row):
     date_left = row['UNIX_TIMES'][2]
     date_right = row['UNIX_TIMES'][3]
     image_ids = get_image_ids(get_coord_list(row['geometry']), date_left, date_right)
-    conf_date_left = get_time_from_id(image_ids[-1])
-    conf_date_right = get_time_from_id(image_ids[0])
+    id_date_left = get_time_from_id(image_ids[-1])
+    id_date_right = get_time_from_id(image_ids[0])
     band_strings = get_bands_string(image_ids)
     base_url = "{}/{},{}/zoom/{}/dates/{}..{}/geometry/{}/items/{}/comparing/result::PSScene4Band:{},result::PSScene4Band:{}".format(
-                                explore_base_url,lat_s,lng_s,zoom_base,date_left,date_right,row['wkt'],band_strings,conf_date_left,conf_date_right)
+                                explore_base_url,lat_s,lng_s,zoom_base,date_left,date_right,row['wkt'],band_strings,id_date_left,id_date_right)
     return base_url
 
 # load database from csv
