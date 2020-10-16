@@ -39,3 +39,6 @@
 [Link to reactive image](https://public.flourish.studio/visualisation/4029198/)
 
 ![Deforestation in Brazil](https://github.com/skyprince999/planet_hack_2020_deforestation/blob/main/Deterioration%20in%20Brazil.jpeg)
+
+## Large outliers skew the data
+![](https://github.com/kevinlacaille/planet_hack_2020_deforestation/blob/main/Box-Plot-UF.png)
