@@ -53,12 +53,15 @@ seconds_per_week = 604800
 def create_times(date, before_weeks=2, after_weeks=4):
     '''
     Takes in a date as a string, and returns a tuple of (two_weeks_before, 4 weeks after) in Unix time.
-    This is used for the end of the url after result::, 
+    This is used for the end of the url after result::,
     and needs to be one day after before_date and one day before after_date.
     '''
     ## UNIX Conversion ##
     # This standardizes time to UTC
-    view_date = calendar.timegm(date.timetuple()) * 1000
+    try:
+        view_date = calendar.timegm(date.timetuple()) * 1000
+    except:
+        print('problem with view_date')
     #view_date = time.mktime(date.timetuple()) * 1000
     before_date = view_date - (seconds_per_week * before_weeks * 1000)
     after_date = view_date + (seconds_per_week * after_weeks * 1000)
@@ -66,7 +69,7 @@ def create_times(date, before_weeks=2, after_weeks=4):
     ## ISO FORMAT ##
     iso_view_date = datetime.datetime.utcfromtimestamp(after_date/1000).isoformat()+'Z'
     iso_before_date = datetime.datetime.utcfromtimestamp(before_date/1000).isoformat()+'Z'
-    
+
     return (int(before_date + 86400000), int(after_date - 86400000), iso_before_date, iso_view_date)
 
 deg_to_meters_lat_minus_seven = 110590
@@ -95,7 +98,7 @@ def get_coord_list(geo_row):
 
 def get_image_ids(coord_list, earlier_time, later_time):
 
-    console.logger.info('get_image_ids')
+    app.logger.info('get_image_ids')
 
     json_geometry = {'type': 'Polygon', 'coordinates': [coord_list]}
 
@@ -131,7 +134,7 @@ def get_image_ids(coord_list, earlier_time, later_time):
     # combine our geo, date, cloud filters
     combined_filter = {
       "type": "AndFilter",
-      "config": [geometry_filter, date_range_filter, cloud_cover_filter]      # Rmove 
+      "config": [geometry_filter, date_range_filter, cloud_cover_filter]      # Rmove
     }
 
     # API Key stored as an env variable
@@ -142,7 +145,7 @@ def get_image_ids(coord_list, earlier_time, later_time):
 
     # API request object
     search_request = {
-      "item_types": [item_type], 
+      "item_types": [item_type],
       "filter": combined_filter
     }
 
@@ -152,14 +155,14 @@ def get_image_ids(coord_list, earlier_time, later_time):
         'https://api.planet.com/data/v1/quick-search',
         auth=HTTPBasicAuth(PLANET_API_KEY, ''),
         json=search_request)
-    
+
     image_ids = [feature['id'] for feature in search_result.json()['features']]
-    
-    return image_ids 
+
+    return image_ids
 
 def get_bands_string(image_ids):
 
-    console.logger.info('get_bands_string')
+    app.logger.info('get_bands_string')
 
 
     strings = []
@@ -173,6 +176,8 @@ explore_base_url = 'https://www.planet.com/explorer/#/mode/compare/interval/1%20
 zoom_base = 13.5
 
 def compute_url(row):
+    import pdb
+    # pdb.set_trace()
     app.logger.info('compute_url')
     lng_s = "{}".format(row['LONG'])
     lat_s = "{}".format(row['LAT'])
@@ -185,9 +190,9 @@ def compute_url(row):
     app.logger.info(date_left)
     band_strings = get_bands_string(get_image_ids(get_coord_list(row['geometry']), date_left, date_right))
     app.logger.info(band_strings)
-    base_url = "{}/{},{}/zoom/{}/dates/{}..{}/geometry/{row['wkt']}/items/{}/comparing/result::PSScene4Band:{},result::PSScene4Band:{}".format(
-                                explore_base_url,lat_s,lng_s,zoom_base,date_left,date_right,band_strings,scene_date_left,scene_date_right)
-    return base_url    
+    base_url = "{}/{},{}/zoom/{}/dates/{}..{}/geometry/{}/items/{}/comparing/result::PSScene4Band:{},result::PSScene4Band:{}".format(
+                                explore_base_url,lat_s,lng_s,zoom_base,date_left,date_right,row['wkt'],band_strings,scene_date_left,scene_date_right)
+    return base_url
 
 # load database from csv
 def load_database(input_file=csv_file):
@@ -250,13 +255,17 @@ def api_id():
         return "Error: No id field provided. Please specify an id."
 
     try:
-        row = brasil_data_buffer_gdf[brasil_data_buffer_gdf['id']==id]
+        print('id= ', id, type(id))
+        row = brasil_data_buffer_gdf[brasil_data_buffer_gdf['id']==id].iloc[0]
+        print(row)
+        print(type(row))
         app.logger.info(row)
         base_url = compute_url(row)
         app.logger.info(base_url)
-    except:
+    except Exception as e:
+        print(e)
         return "Error: Non existing id or unexpected error."
-        
+
     return redirect(base_url)
 
 ##################
