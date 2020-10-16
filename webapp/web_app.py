@@ -268,7 +268,7 @@ def api_id():
         row = brasil_data_buffer_gdf[brasil_data_buffer_gdf['id']==id].iloc[0]
         base_url = compute_url(row)
     except Exception as e:
-        print(e)
+        app.logger.warning(e)
         return "Error: Non existing id or unexpected error."
 
     return redirect(base_url)
