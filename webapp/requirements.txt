@@ -1,0 +1,5 @@
+flask
+geopandas
+python-dotenv
+requests
+
