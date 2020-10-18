@@ -1,13 +1,11 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# proper logging setup
 import logging
-#from logging.handlers import RotatingFileHandler
 from logging.handlers import TimedRotatingFileHandler
 
 import flask
-from flask import request, jsonify, redirect
+from flask import request, redirect
 
 import calendar
 from collections import namedtuple
@@ -24,8 +22,10 @@ import geopandas as gpd
 import pandas as pd
 from shapely.geometry import Point
 
+# create Flask app
 app = flask.Flask(__name__)
-# load config
+
+# load Flask app config from file
 app.config.from_pyfile('web_app_config.cfg')
 running_env = app.config['RUNNING_ENV']
 debug_mode = app.config['DEBUG_MODE']
@@ -33,12 +33,12 @@ logging_file_name = app.config['LOGGING_FILE_NAME']
 logging_file_size = app.config['LOGGING_FILE_SIZE']
 logging_file_count = app.config['LOGGING_FILE_COUNT']
 logging_file_level = app.config['LOGGING_FILE_LEVEL']
-csv_file = app.config['DATABASE_CSV']
-pkl_file = app.config['DATABASE_PKL']
+database_file_base_name = app.config['DATABASE_FILE_BASENAME']
+explorer_base_url=app.config['EXPLORER_BASE_URL']
+zoom_level=app.config['DEFAULT_ZOOM']
 
-# Planet API Key & Flask secret key stored as env variables
+# load required env vars, hopefully set in .env file
 load_dotenv()
-
 PLANET_API_KEY = os.getenv('PL_API_KEY')
 if PLANET_API_KEY is None:
     app.logger.error('Env variable PL_API_KEY is not defined. Please set it with your Planet API key in ./.env')
@@ -49,20 +49,21 @@ if SECRET_KEY is None:
     sys.exit(1)
 app.config['SECRET_KEY'] = SECRET_KEY
 
-# app.config['DEBUG'] = True
-
-# configure logging according to user defined settings
+# configure logging according to settings defined in config file 
 formatter = logging.Formatter(
     "[%(asctime)s] {%(filename)s:%(funcName)s:%(lineno)d} %(levelname)s - %(message)s")
-# handler = RotatingFileHandler(logging_file_name, maxBytes=logging_file_size, backupCount=logging_file_count)
 handler = TimedRotatingFileHandler(logging_file_name, when='midnight', backupCount=logging_file_count)
 app.logger.setLevel(logging_file_level)
 handler.setFormatter(formatter)
 app.logger.addHandler(handler)
 
+# Global variables
+seconds_per_week = 604800                                       # used by create_times
+deg_to_meters_lat_minus_seven = 110590                          # used by create_buffer
+five_km_in_deg = 5000/float(deg_to_meters_lat_minus_seven)      # used by create_buffer
+
 # utility functions
 
-seconds_per_week = 604800
 def create_times(date, before_weeks=2, after_weeks=4):
     '''
     Takes in a date as a string, and returns a tuple of (two_weeks_before, 4 weeks after) in Unix time.
@@ -92,9 +93,10 @@ def get_time_from_id(image_id):
     time_in_ms = calendar.timegm(date.timetuple()) * 1000
     return time_in_ms
 
-deg_to_meters_lat_minus_seven = 110590
-five_km_in_deg = 5000/110590.
 def create_buffer(row):
+    '''
+    Takes in a geodataframe row, and returns the row with a new geometry (5km circle around LAT,LONG).
+    '''
     dist = five_km_in_deg
     point = row["geometry"]
     row["geometry"] = point.buffer(dist)
@@ -113,8 +115,6 @@ def get_coord_list(geo_row):
     for sublist in coords:
         final_coords.append([float(num) for num in sublist])
     return final_coords
-
-#### NOTE: Your Planet API key needs to be in a .env file inside this directory for this cell to work ####
 
 def get_image_ids(coord_list, earlier_time, later_time):
 
@@ -177,7 +177,6 @@ def get_image_ids(coord_list, earlier_time, later_time):
     return image_ids
 
 def get_bands_string(image_ids):
-
     strings = []
     for s in image_ids:
         strings.append(f'PSScene4Band%3{s},')
@@ -185,12 +184,7 @@ def get_bands_string(image_ids):
     scenes = scenes[:-1]
     return scenes
 
-explore_base_url = 'https://www.planet.com/explorer/#/mode/compare/interval/1%20day/center'
-zoom_base = 13.5
-
 def compute_url(row):
-    # import pdb
-    # pdb.set_trace()
     lng_s = "{}".format(row['LONG'])
     lat_s = "{}".format(row['LAT'])
     scene_date_left = row['UNIX_TIMES'][0]
@@ -202,56 +196,47 @@ def compute_url(row):
     id_date_right = get_time_from_id(image_ids[0])
     band_strings = get_bands_string(image_ids)
     base_url = "{}/{},{}/zoom/{}/dates/{}..{}/geometry/{}/items/{}/comparing/result::PSScene4Band:{},result::PSScene4Band:{}".format(
-                                explore_base_url,lat_s,lng_s,zoom_base,date_left,date_right,row['wkt'],band_strings,id_date_left,id_date_right)
+                                explorer_base_url,lat_s,lng_s,zoom_level,date_left,date_right,row['wkt'],band_strings,id_date_left,id_date_right)
     return base_url
 
-# load database from csv
-def load_database(input_file=csv_file):
-
+def load_database(input_file=database_file_base_name):
+    '''
+    Takes in base filename, and returns a geodataframe after either 
+    - loading a cached pickle version 
+    - or building a new one from a csv file.
+    '''
     try:
-        brasil_data_buffer_gdf = pd.read_pickle(pkl_file)
-        app.logger.info('Found pickle')
-    except:
+        brasil_data_buffer_gdf = pd.read_pickle('{}.pkl'.format(os.path.join(database_file_base_name)))
+        app.logger.info('Found existing pickle, using it instead of CSV')
+    except Exception as e:
         app.logger.info('1 - Loading CSV')
-
-        brasil_data = pd.read_csv(csv_file, header=0)
+        brasil_data = pd.read_csv('{}.csv'.format(os.path.join(database_file_base_name)), header=0)
         brasil_data.columns.values[0] = 'id'
 
         app.logger.info('2 - Building dates columns')
-
         # Dates columns
         brasil_data['VIEW_DATE'] = brasil_data['VIEW_DATE'].apply(lambda row: datetime.datetime.strptime(row, '%Y-%m-%d'))
         # inserting the UNIX_TIMES (2WeeksPrior, ViewDate) into the dataframe after the VIEW_DATE column
         brasil_data.insert(4, 'UNIX_TIMES', brasil_data.apply(lambda row: create_times(row['VIEW_DATE']), axis=1))
 
         app.logger.info('3a - Building Wkt column - Point geom')
-
-        # wkt column
         geometry = [Point(xy) for xy in zip(brasil_data.LAT, brasil_data.LONG)]
         brasil_data_gdf = gpd.GeoDataFrame(brasil_data, geometry=geometry)
         brasil_data_gdf.crs = 'epsg:4326'
 
         app.logger.info('3b - Building Wkt column - Buffered geom')
-
         brasil_data_buffer_gdf = brasil_data_gdf.apply(create_buffer,axis=1)
         brasil_data_buffer_gdf.crs = 'epsg:4326'
 
         app.logger.info('3c - Building Wkt column - geom to wkt conversion')
-
         brasil_data_buffer_gdf['wkt'] = brasil_data_buffer_gdf.apply(lambda row: row.geometry.simplify(0.0005).wkt.replace(' ',''), axis=1)
 
-        app.logger.info('4 - Done loading database')
+        app.logger.info('4 - Saving prebuilt database to pickle')
+        brasil_data_buffer_gdf.to_pickle('{}.pkl'.format(os.path.join(database_file_base_name)))
 
-        brasil_data_buffer_gdf.to_pickle(pkl_file)
+        app.logger.info('5 - Finished preparing database, app is ready')
 
     return brasil_data_buffer_gdf
-
-brasil_data_buffer_gdf = load_database()
-
-# Bands
-# Wrapping everything up, this will take about 8-10 minutes to run
-# brasil_data_buffer_gdf['bands_string'] = brasil_data_buffer_gdf.apply(lambda row:
-# get_bands_string(get_image_ids(get_coord_list(row['geometry']), row['UNIX_TIMES'][2], row['UNIX_TIMES'][3])), axis=1)
 
 # Flask request handling functions
 
@@ -263,7 +248,7 @@ def home():
 @app.route('/api/v1/notice', methods=['GET'])
 def api_id():
     # Check if an ID was provided as part of the URL.
-    # If ID is provided, assign it to a variable.
+    # If ID is provided and exists, redirect to Planet Explorer
     # If no ID is provided, display an error in the browser.
     if 'id' in request.args:
         id = int(request.args['id'])
@@ -279,7 +264,7 @@ def api_id():
         app.logger.warning(e)
         return "Error: Non existing id or unexpected error."
 
-    # page_content = '<a href="{}">Go</a>'.format(base_url)
+    # page_content = '<a href="{}">Go to Planet Explorer site</a>'.format(base_url)
     page_content = """
         <!DOCTYPE html>
         <html>
@@ -288,7 +273,7 @@ def api_id():
             <meta http-equiv = "refresh" content = "1; url = {}" />
         </head>
         <body>
-            <p>Redirecting to another URL</p>
+            <p>Redirecting to Planet Explorer site</p>
         </body>
         </html>
     """.format(base_url)
@@ -299,6 +284,8 @@ def api_id():
 #      Main      #
 #                #
 ##################
+
+brasil_data_buffer_gdf = load_database()
 
 if __name__ == '__main__':
 
