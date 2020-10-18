@@ -199,51 +199,68 @@ def compute_url(row):
                                 explorer_base_url,lat_s,lng_s,zoom_level,date_left,date_right,row['wkt'],band_strings,id_date_left,id_date_right)
     return base_url
 
-def load_database(input_file=database_file_base_name):
+def load_database(input_file=database_file_base_name, force_csv=False):
     '''
     Takes in base filename, and returns a geodataframe after either 
     - loading a cached pickle version 
     - or building a new one from a csv file.
     '''
-    try:
-        brasil_data_buffer_gdf = pd.read_pickle('{}.pkl'.format(os.path.join(database_file_base_name)))
-        app.logger.info('Found existing pickle, using it instead of CSV')
-    except Exception as e:
-        app.logger.info('1 - Loading CSV')
-        brasil_data = pd.read_csv('{}.csv'.format(os.path.join(database_file_base_name)), header=0)
-        brasil_data.columns.values[0] = 'id'
+    if force_csv:
+        gdf = load_csv(database_file_base_name)
+    else:
+        try:
+            gdf = pd.read_pickle('{}.pkl'.format(os.path.join(database_file_base_name)))
+            app.logger.info('Found existing pickle, using it instead of CSV')
+        except Exception as e:
+            gdf = load_csv(database_file_base_name)
+    return gdf
 
-        app.logger.info('2 - Building dates columns')
-        # Dates columns
-        brasil_data['VIEW_DATE'] = brasil_data['VIEW_DATE'].apply(lambda row: datetime.datetime.strptime(row, '%Y-%m-%d'))
-        # inserting the UNIX_TIMES (2WeeksPrior, ViewDate) into the dataframe after the VIEW_DATE column
-        brasil_data.insert(4, 'UNIX_TIMES', brasil_data.apply(lambda row: create_times(row['VIEW_DATE']), axis=1))
+def load_csv(input_file=database_file_base_name):
+    '''
+    Takes in base filename, and returns a geodataframe after building a new one from a csv file.
+    Used by load_database() when pickle file is not found or rebuilt
+    '''
+    app.logger.info('1 - Loading CSV')
+    df = pd.read_csv('{}.csv'.format(os.path.join(database_file_base_name)), header=0)
+    df.columns.values[0] = 'id'
 
-        app.logger.info('3a - Building Wkt column - Point geom')
-        geometry = [Point(xy) for xy in zip(brasil_data.LAT, brasil_data.LONG)]
-        brasil_data_gdf = gpd.GeoDataFrame(brasil_data, geometry=geometry)
-        brasil_data_gdf.crs = 'epsg:4326'
+    app.logger.info('2 - Building dates columns')
+    # Dates columns
+    df['VIEW_DATE'] = df['VIEW_DATE'].apply(lambda row: datetime.datetime.strptime(row, '%Y-%m-%d'))
+    # inserting the UNIX_TIMES (2WeeksPrior, ViewDate) into the dataframe after the VIEW_DATE column
+    df.insert(4, 'UNIX_TIMES', df.apply(lambda row: create_times(row['VIEW_DATE']), axis=1))
 
-        app.logger.info('3b - Building Wkt column - Buffered geom')
-        brasil_data_buffer_gdf = brasil_data_gdf.apply(create_buffer,axis=1)
-        brasil_data_buffer_gdf.crs = 'epsg:4326'
+    app.logger.info('3a - Building Wkt column - Point geom')
+    geometry = [Point(xy) for xy in zip(df.LAT, df.LONG)]
+    gdf = gpd.GeoDataFrame(df, geometry=geometry)
+    gdf.crs = 'epsg:4326'
 
-        app.logger.info('3c - Building Wkt column - geom to wkt conversion')
-        brasil_data_buffer_gdf['wkt'] = brasil_data_buffer_gdf.apply(lambda row: row.geometry.simplify(0.0005).wkt.replace(' ',''), axis=1)
+    app.logger.info('3b - Building Wkt column - Buffered geom')
+    gdf = gdf.apply(create_buffer,axis=1)
+    gdf.crs = 'epsg:4326'
 
-        app.logger.info('4 - Saving prebuilt database to pickle')
-        brasil_data_buffer_gdf.to_pickle('{}.pkl'.format(os.path.join(database_file_base_name)))
+    app.logger.info('3c - Building Wkt column - geom to wkt conversion')
+    gdf['wkt'] = gdf.apply(lambda row: row.geometry.simplify(0.0005).wkt.replace(' ',''), axis=1)
 
-        app.logger.info('5 - Finished preparing database, app is ready')
+    app.logger.info('4 - Saving prebuilt database to pickle')
+    gdf.to_pickle('{}.pkl'.format(os.path.join(database_file_base_name)))
 
-    return brasil_data_buffer_gdf
+    app.logger.info('5 - Finished preparing database, app is ready with {} rows'.format(len(gdf)))
+    return gdf
 
 # Flask request handling functions
 
 @app.route('/', methods=['GET'])
 def home():
     return '''<h1>Planet Hack 2020</h1>
-<p>URL resolver for Google Sheet data.</p>'''
+    <p>URL resolver for Google Sheet data.</p>'''
+
+@app.route('/rebuild', methods=['GET'])
+def db_rebuild():
+    global brasil_data_buffer_gdf
+    brasil_data_buffer_gdf = load_database(force_csv=True)
+    return '''<h1>Planet Hack 2020</h1>
+    <p>Pickled database rebuilt from CSV</p>'''
 
 @app.route('/api/v1/notice', methods=['GET'])
 def api_id():
