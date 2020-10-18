@@ -31,7 +31,7 @@ export FLASK_SECRET_KEY=<your_own_secret_key>
 
 ## Defining CSV file name to load
 
-Edit `DATABASE_CSV` and `DATABASE_PKL` in `web_app_config.cfg` if you want to use your own data
+Edit `DATABASE_FILE_BASENAME` in `web_app_config.cfg` to use your own data
 
 # Running the application locally
 
@@ -43,6 +43,10 @@ $ # cd to where you cloned the repo if needed
 $ # cd to webapp subfolder if needed
 $ python web_app.py
 ```
+
+On the first run, you should see the CSV file being loaded to build a pickled geodataframe which will be used in subsequent app launches.
+
+You can hit `/rebuild` at any time to force the reconstruction from the CSV file (in case it is updated)
 
 ## Testing if the application is working
 
