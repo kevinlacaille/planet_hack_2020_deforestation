@@ -17,19 +17,16 @@ import json
 import requests
 from requests.auth import HTTPBasicAuth
 import time
+import sys 
 
 from dotenv import load_dotenv
 import geopandas as gpd
 import pandas as pd
 from shapely.geometry import Point
 
-load_dotenv()
-
 app = flask.Flask(__name__)
-app.config.from_pyfile('web_app_config.cfg')
-
 # load config
-app.config["DEBUG"] = True
+app.config.from_pyfile('web_app_config.cfg')
 running_env = app.config['RUNNING_ENV']
 debug_mode = app.config['DEBUG_MODE']
 logging_file_name = app.config['LOGGING_FILE_NAME']
@@ -38,6 +35,21 @@ logging_file_count = app.config['LOGGING_FILE_COUNT']
 logging_file_level = app.config['LOGGING_FILE_LEVEL']
 csv_file = app.config['DATABASE_CSV']
 pkl_file = app.config['DATABASE_PKL']
+
+# Planet API Key & Flask secret key stored as env variables
+load_dotenv()
+
+PLANET_API_KEY = os.getenv('PL_API_KEY')
+if PLANET_API_KEY is None:
+    app.logger.error('Env variable PL_API_KEY is not defined. Please set it with your Planet API key in ./.env')
+    sys.exit(1)
+SECRET_KEY = os.getenv('FLASK_SECRET_KEY')
+if SECRET_KEY is None:
+    app.logger.error('Env variable FLASK_SECRET_KEY is not defined. Please set it with a custom secret value in ./.env')
+    sys.exit(1)
+app.config['SECRET_KEY'] = SECRET_KEY
+
+# app.config['DEBUG'] = True
 
 # configure logging according to user defined settings
 formatter = logging.Formatter(
@@ -142,10 +154,6 @@ def get_image_ids(coord_list, earlier_time, later_time):
       "type": "AndFilter",
       "config": [geometry_filter, date_range_filter, cloud_cover_filter]      # Rmove
     }
-
-    # API Key stored as an env variable
-    PLANET_API_KEY = os.getenv('PL_API_KEY')
-
 
     item_type = "PSScene4Band"
 

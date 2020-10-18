@@ -20,12 +20,13 @@ $ cd planet_hack_2020_deforestation/webapp
 $ pip install -r requirements.txt
 ```
 
-## Configuring your Planet API key
+## Configuring your Planet API key and Flask secret key
 
-Create a `.env` file in the `webapp` folder containing the following line (adjust `PL_API_KEY` value with your own Planet API key)
+Create a `.env` file in the `webapp` folder containing the following lines (adjust `PL_API_KEY` value with your own Planet API key and `FLASK_SECRET_KEY` to a custom secret value)
 
 ```
 export PL_API_KEY=<your_api_key>
+export FLASK_SECRET_KEY=<your_own_secret_key>
 ```
 
 ## Defining CSV file name to load
