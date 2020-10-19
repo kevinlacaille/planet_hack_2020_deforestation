@@ -15,7 +15,7 @@ import json
 import requests
 from requests.auth import HTTPBasicAuth
 import time
-import sys 
+import sys
 
 from dotenv import load_dotenv
 import geopandas as gpd
@@ -36,6 +36,10 @@ logging_file_level = app.config['LOGGING_FILE_LEVEL']
 database_file_base_name = app.config['DATABASE_FILE_BASENAME']
 explorer_base_url=app.config['EXPLORER_BASE_URL']
 zoom_level=app.config['DEFAULT_ZOOM']
+LAT = app.config['LAT_COLUMN']
+LONG = app.config['LONG_COLUMN']
+WEEKS_LEFT = app.config['WEEKS_LEFT_OF_DATE']
+WEEKS_RIGHT = app.config['WEEKS_RIGHT_OF_DATE']
 
 # load required env vars, hopefully set in .env file
 load_dotenv()
@@ -49,7 +53,7 @@ if SECRET_KEY is None:
     sys.exit(1)
 app.config['SECRET_KEY'] = SECRET_KEY
 
-# configure logging according to settings defined in config file 
+# configure logging according to settings defined in config file
 formatter = logging.Formatter(
     "[%(asctime)s] {%(filename)s:%(funcName)s:%(lineno)d} %(levelname)s - %(message)s")
 handler = TimedRotatingFileHandler(logging_file_name, when='midnight', backupCount=logging_file_count)
@@ -64,7 +68,7 @@ five_km_in_deg = 5000/float(deg_to_meters_lat_minus_seven)      # used by create
 
 # utility functions
 
-def create_times(date, before_weeks=2, after_weeks=4):
+def create_times(date, before_weeks=WEEKS_LEFT, after_weeks=WEEKS_RIGHT):
     '''
     Takes in a date as a string, and returns a tuple of (two_weeks_before, 4 weeks after) in Unix time.
     This is used for the end of the url after result::,
@@ -185,8 +189,8 @@ def get_bands_string(image_ids):
     return scenes
 
 def compute_url(row):
-    lng_s = "{}".format(row['LONG'])
-    lat_s = "{}".format(row['LAT'])
+    lng_s = "{}".format(row[LONG])
+    lat_s = "{}".format(row[LAT])
     scene_date_left = row['UNIX_TIMES'][0]
     scene_date_right = row['UNIX_TIMES'][1]
     date_left = row['UNIX_TIMES'][2]
@@ -201,8 +205,8 @@ def compute_url(row):
 
 def load_database(input_file=database_file_base_name, force_csv=False):
     '''
-    Takes in base filename, and returns a geodataframe after either 
-    - loading a cached pickle version 
+    Takes in base filename, and returns a geodataframe after either
+    - loading a cached pickle version
     - or building a new one from a csv file.
     '''
     if force_csv:
@@ -231,7 +235,7 @@ def load_csv(input_file=database_file_base_name):
     df.insert(4, 'UNIX_TIMES', df.apply(lambda row: create_times(row['VIEW_DATE']), axis=1))
 
     app.logger.info('3a - Building Wkt column - Point geom')
-    geometry = [Point(xy) for xy in zip(df.LAT, df.LONG)]
+    geometry = [Point(xy) for xy in zip(df[LAT], df[LONG])]
     gdf = gpd.GeoDataFrame(df, geometry=geometry)
     gdf.crs = 'epsg:4326'
 
