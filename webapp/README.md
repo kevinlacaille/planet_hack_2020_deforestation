@@ -14,9 +14,10 @@
 ## Setting up the virtual environment and getting the project code
 
 ```
-$ mkvirtualenv -p python3.7 planet_hack_2020_deforestation_flask
+# cd to some path where you usually store all your code projects
 $ git clone https://github.com/kevinlacaille/planet_hack_2020_deforestation.git
 $ cd planet_hack_2020_deforestation/webapp
+$ mkvirtualenv -p python3.7 -a . planet_hack_2020_deforestation_flask
 $ pip install -r requirements.txt
 ```
 
@@ -39,8 +40,6 @@ Edit `DATABASE_FILE_BASENAME` in `web_app_config.cfg` to use your own data
 
 ```
 $ workon planet_hack_2020_deforestation
-$ # cd to where you cloned the repo if needed
-$ # cd to webapp subfolder if needed
 $ python web_app.py
 ```
 
