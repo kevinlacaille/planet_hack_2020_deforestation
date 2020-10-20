@@ -43,7 +43,7 @@ days_before_date = app.config['DAYS_BEFORE_REFERENCE_DATE']
 days_after_date = app.config['DAYS_AFTER_REFERENCE_DATE']
 radius = app.config['DEFAULT_RADIUS']
 simplification_threshold = app.config['SIMPLIFICATION_THRESHOLD']
-clouds_threshold = app.config['CLOUDS_THRESHOLD']
+default_cloud_cover = app.config['MAX_CLOUD_COVER']
 
 # load required env vars, hopefully set in .env file
 load_dotenv()
@@ -125,7 +125,7 @@ def get_coord_list(geo_row):
         final_coords.append([float(num) for num in sublist])
     return final_coords
 
-def get_image_ids(coord_list, earlier_time, later_time):
+def get_image_ids(coord_list, earlier_time, later_time, max_cloud_cover=default_cloud_cover):
 
     json_geometry = {'type': 'Polygon', 'coordinates': [coord_list]}
 
@@ -148,13 +148,12 @@ def get_image_ids(coord_list, earlier_time, later_time):
     # unix_ts = calendar.timegm(datetime(2020, 7, 13, 0, 0, tzinfo=timezone.utc).timetuple())
     # final result:: time needs to be these times plus and minus a day
 
-
     # only get images which have less than a set cloud coverage (defined in configuration file, default 75%) 
     cloud_cover_filter = {
       "type": "RangeFilter",
       "field_name": "cloud_cover",
       "config": {
-        "lte": clouds_threshold
+        "lte": max_cloud_cover/100.
       }
     }
 
@@ -193,14 +192,14 @@ def get_bands_string(image_ids):
     scenes = scenes[:-1]
     return scenes
 
-def compute_url(row):
+def compute_url(row, max_cloud_cover=default_cloud_cover):
     lng_s = "{}".format(row[LONG])
     lat_s = "{}".format(row[LAT])
     scene_date_left = row['UNIX_TIMES'][0]
     scene_date_right = row['UNIX_TIMES'][1]
     date_left = row['UNIX_TIMES'][2]
     date_right = row['UNIX_TIMES'][3]
-    image_ids = get_image_ids(get_coord_list(row['geometry']), date_left, date_right)
+    image_ids = get_image_ids(get_coord_list(row['geometry']), date_left, date_right, max_cloud_cover=max_cloud_cover)
     id_date_left = get_time_from_id(image_ids[-1])
     id_date_right = get_time_from_id(image_ids[0])
     band_strings = get_bands_string(image_ids)
@@ -276,11 +275,12 @@ def api_id():
     '''
     route handling redirection requests
     mandatory params:
-    - id: unique id of a row
+    - id: unique id of a row (int)
     optional params:
-    - rm: Radius in Meters around the coordinates to create circle
-    - db: number of Days Before date in database for beginning of image search period
-    - da: number of Days After date in database for end of image search period
+    - rm: Radius in Meters around the coordinates to create circle (int)
+    - db: number of Days Before date in database for beginning of image search period (int)
+    - da: number of Days After date in database for end of image search period (int)
+    - cc: max cloud cover accepted (int, 0 to 100)
     '''
 
     # Check if an ID was provided as part of the URL.
@@ -311,6 +311,12 @@ def api_id():
     else:
         custom_days_after_date = days_after_date
 
+    # handle "days before" optional parameter
+    if 'cc' in request.args:
+        custom_cloud_cover = int(request.args['cc'])
+    else:
+        custom_cloud_cover = default_cloud_cover
+
     # search for row with provided id
     try:
         # take first row matching id
@@ -323,7 +329,7 @@ def api_id():
         if (custom_days_before_date != days_before_date) or (custom_days_after_date != days_after_date):
             row['UNIX_TIMES'] = create_times(row['VIEW_DATE'], custom_days_before_date, custom_days_after_date)
         # compute redirect URL from default and updated parameters
-        base_url = compute_url(row)
+        base_url = compute_url(row, max_cloud_cover=custom_cloud_cover)
     except Exception as e:
         app.logger.warning(e)
         return "Error: Non existing id or unexpected error."
