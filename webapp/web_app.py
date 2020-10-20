@@ -34,12 +34,15 @@ logging_file_size = app.config['LOGGING_FILE_SIZE']
 logging_file_count = app.config['LOGGING_FILE_COUNT']
 logging_file_level = app.config['LOGGING_FILE_LEVEL']
 database_file_base_name = app.config['DATABASE_FILE_BASENAME']
+redirect_delay = app.config['REDIRECT_DELAY']
 explorer_base_url=app.config['EXPLORER_BASE_URL']
 zoom_level=app.config['DEFAULT_ZOOM']
 LAT = app.config['LAT_COLUMN']
 LONG = app.config['LONG_COLUMN']
-WEEKS_LEFT = app.config['WEEKS_LEFT_OF_DATE']
-WEEKS_RIGHT = app.config['WEEKS_RIGHT_OF_DATE']
+days_before_date = app.config['DAYS_BEFORE_REFERENCE_DATE']
+days_after_date = app.config['DAYS_AFTER_REFERENCE_DATE']
+radius = app.config['DEFAULT_RADIUS']
+simplification_threshold = app.config['SIMPLIFICATION_THRESHOLD']
 
 # load required env vars, hopefully set in .env file
 load_dotenv()
@@ -62,15 +65,16 @@ handler.setFormatter(formatter)
 app.logger.addHandler(handler)
 
 # Global variables
-seconds_per_week = 604800                                       # used by create_times
-deg_to_meters_lat_minus_seven = 110590                          # used by create_buffer
-five_km_in_deg = 5000/float(deg_to_meters_lat_minus_seven)      # used by create_buffer
+seconds_per_day = 86400                                                 # used by create_times
+millisecs_per_day = seconds_per_day * 1000                              # used by create_times
+deg_to_meters_lat_minus_seven = 110590                                  # used by create_buffer
+radius_in_deg = radius/float(deg_to_meters_lat_minus_seven)             # used by create_buffer
 
 # utility functions
 
-def create_times(date, before_weeks=WEEKS_LEFT, after_weeks=WEEKS_RIGHT):
+def create_times(date, days_before=days_before_date, days_after=days_after_date):
     '''
-    Takes in a date as a string, and returns a tuple of (two_weeks_before, 4 weeks after) in Unix time.
+    Takes in a date as a string, and returns a tuple of (x days before, y days after) in Unix time.
     This is used for the end of the url after result::,
     and needs to be one day after before_date and one day before after_date.
     '''
@@ -79,14 +83,14 @@ def create_times(date, before_weeks=WEEKS_LEFT, after_weeks=WEEKS_RIGHT):
     view_date = calendar.timegm(date.timetuple()) * 1000
 
     #view_date = time.mktime(date.timetuple()) * 1000
-    before_date = view_date - (seconds_per_week * before_weeks * 1000)
-    after_date = view_date + (seconds_per_week * after_weeks * 1000)
+    before_date = view_date - (seconds_per_day * days_before * 1000)
+    after_date = view_date + (seconds_per_day * days_after * 1000)
 
     ## ISO FORMAT ##
-    iso_view_date = datetime.datetime.utcfromtimestamp(after_date/1000).isoformat()+'Z'
+    iso_after_date = datetime.datetime.utcfromtimestamp(after_date/1000).isoformat()+'Z'
     iso_before_date = datetime.datetime.utcfromtimestamp(before_date/1000).isoformat()+'Z'
 
-    return (int(before_date + 86400000), int(after_date - 86400000), iso_before_date, iso_view_date)
+    return (int(before_date + millisecs_per_day), int(after_date - millisecs_per_day), iso_before_date, iso_after_date)
 
 def get_time_from_id(image_id):
     '''
@@ -99,9 +103,9 @@ def get_time_from_id(image_id):
 
 def create_buffer(row):
     '''
-    Takes in a geodataframe row, and returns the row with a new geometry (5km circle around LAT,LONG).
+    Takes in a geodataframe row, and returns the row with a new geometry (x km circle around LAT,LONG).
     '''
-    dist = five_km_in_deg
+    dist = radius_in_deg
     point = row["geometry"]
     row["geometry"] = point.buffer(dist)
     return row
@@ -178,7 +182,7 @@ def get_image_ids(coord_list, earlier_time, later_time):
 
     app.logger.info(search_result.status_code)
 
-    return image_ids
+    return sorted(image_ids, reverse=True)
 
 def get_bands_string(image_ids):
     strings = []
@@ -244,7 +248,7 @@ def load_csv(input_file=database_file_base_name):
     gdf.crs = 'epsg:4326'
 
     app.logger.info('3c - Building Wkt column - geom to wkt conversion')
-    gdf['wkt'] = gdf.apply(lambda row: row.geometry.simplify(0.0005).wkt.replace(' ',''), axis=1)
+    gdf['wkt'] = gdf.apply(lambda row: row.geometry.simplify(simplification_threshold).wkt.replace(' ',''), axis=1)
 
     app.logger.info('4 - Saving prebuilt database to pickle')
     gdf.to_pickle('{}.pkl'.format(os.path.join(database_file_base_name)))
@@ -268,6 +272,16 @@ def db_rebuild():
 
 @app.route('/api/v1/notice', methods=['GET'])
 def api_id():
+    '''
+    route handling redirection requests
+    mandatory params:
+    - id: unique id of a row
+    optional params:
+    - rm: Radius in Meters around the coordinates to create circle
+    - db: number of Days Before date in database for beginning of image search period
+    - da: number of Days After date in database for end of image search period
+    '''
+
     # Check if an ID was provided as part of the URL.
     # If ID is provided and exists, redirect to Planet Explorer
     # If no ID is provided, display an error in the browser.
@@ -278,8 +292,36 @@ def api_id():
         app.logger.warning('Incoming request with no id param')
         return "Error: No id field provided. Please specify an id."
 
+    # handle radius optional parameter
+    if 'rm' in request.args:
+        custom_radius = int(request.args['rm'])
+    else:
+        custom_radius = radius
+
+    # handle "days before" optional parameter
+    if 'db' in request.args:
+        custom_days_before_date = int(request.args['db'])
+    else:
+        custom_days_before_date = days_before_date
+
+    # handle "days after" optional parameter
+    if 'da' in request.args:
+        custom_days_after_date = int(request.args['da'])
+    else:
+        custom_days_after_date = days_after_date
+
+    # search for row with provided id
     try:
+        # take first row matching id
         row = brasil_data_buffer_gdf[brasil_data_buffer_gdf['id']==id].iloc[0]
+        # temporarily update row geometry with new radius if provided
+        if (custom_radius != radius): 
+            custom_radius_in_deg = custom_radius/float(deg_to_meters_lat_minus_seven) 
+            row['geometry'] = Point(row[LAT], row[LONG]).buffer(custom_radius_in_deg)
+            row['wkt'] = row['geometry'].simplify(simplification_threshold).wkt.replace(' ','')
+        if (custom_days_before_date != days_before_date) or (custom_days_after_date != days_after_date):
+            row['UNIX_TIMES'] = create_times(row['VIEW_DATE'], custom_days_before_date, custom_days_after_date)
+        # compute redirect URL from default and updated parameters
         base_url = compute_url(row)
     except Exception as e:
         app.logger.warning(e)
@@ -291,13 +333,21 @@ def api_id():
         <html>
         <head>
             <title>HTML Meta Tag</title>
-            <meta http-equiv = "refresh" content = "1; url = {}" />
+            <meta http-equiv = "refresh" content = "{}; url = {}" />
         </head>
         <body>
-            <p>Redirecting to Planet Explorer site</p>
+            <p>Redirecting to Planet Explorer site with the following settings:</p>
+            <ul>
+            <li>Map centered on (Lat, Lng) = ({}, {})</li>
+            <li>Radius = {} m</li>
+            <li>Reference date: {}</li>
+            <li>'Before' date: {} ({} days before reference date)</li>
+            <li>'After' date: {} ({} days after reference date)</li>
+            </ul>
         </body>
         </html>
-    """.format(base_url)
+    """.format(redirect_delay, base_url, row[LAT], row[LONG], custom_radius, row['VIEW_DATE'], 
+            row['UNIX_TIMES'][2], custom_days_before_date, row['UNIX_TIMES'][3], custom_days_after_date)
     return (page_content)
 
 ##################
