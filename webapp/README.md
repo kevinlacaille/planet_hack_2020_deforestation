@@ -49,4 +49,6 @@ You can hit `/rebuild` at any time to force the reconstruction from the CSV file
 
 ## Testing if the application is working
 
-Open your web browser and go to [http://127.0.0.1:5001/api/v1/notice?id=202](http://127.0.0.1:5001/api/v1/notice?id=202). You should be redirected to a Planet Explore page centered on the `LAT`, `LONG` defined for `id`=202, and a window period defined around the `VIEW_DATE` value
+Open your web browser and go to [http://127.0.0.1:5001/api/v1/notice?id=202](http://127.0.0.1:5001/api/v1/notice?id=202). You should be redirected to a Planet Explore page centered on the `LAT`, `LONG` defined for `id`=202, and a window period defined around the `VIEW_DATE` value. 
+
+UPDATE 2020-10-20: Added rm (radius in meters), db (days before) and da (days after) optional parameters. Example: /api/v1/notice?id=202&rm=7000&db=5&da=10
