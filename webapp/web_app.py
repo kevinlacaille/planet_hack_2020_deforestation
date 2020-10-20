@@ -43,6 +43,7 @@ days_before_date = app.config['DAYS_BEFORE_REFERENCE_DATE']
 days_after_date = app.config['DAYS_AFTER_REFERENCE_DATE']
 radius = app.config['DEFAULT_RADIUS']
 simplification_threshold = app.config['SIMPLIFICATION_THRESHOLD']
+clouds_threshold = app.config['CLOUDS_THRESHOLD']
 
 # load required env vars, hopefully set in .env file
 load_dotenv()
@@ -148,12 +149,12 @@ def get_image_ids(coord_list, earlier_time, later_time):
     # final result:: time needs to be these times plus and minus a day
 
 
-    # only get images which have <50% cloud coverage
+    # only get images which have less than a set cloud coverage (defined in configuration file, default 75%) 
     cloud_cover_filter = {
       "type": "RangeFilter",
       "field_name": "cloud_cover",
       "config": {
-        "lte": 0.75
+        "lte": clouds_threshold
       }
     }
 
