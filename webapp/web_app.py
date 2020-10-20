@@ -39,6 +39,8 @@ explorer_base_url=app.config['EXPLORER_BASE_URL']
 zoom_level=app.config['DEFAULT_ZOOM']
 LAT = app.config['LAT_COLUMN']
 LONG = app.config['LONG_COLUMN']
+ID = app.config['ID_COLUMN']
+REFERENCE_DATE = ['REFERENCE_DATE_COLUMN']
 days_before_date = app.config['DAYS_BEFORE_REFERENCE_DATE']
 days_after_date = app.config['DAYS_AFTER_REFERENCE_DATE']
 radius = app.config['DEFAULT_RADIUS']
@@ -230,7 +232,6 @@ def load_csv(input_file=database_file_base_name):
     '''
     app.logger.info('1 - Loading CSV')
     df = pd.read_csv('{}.csv'.format(os.path.join(database_file_base_name)), header=0)
-    df.columns.values[0] = 'id'
 
     app.logger.info('2 - Building dates columns')
     # Dates columns
@@ -320,7 +321,7 @@ def api_id():
     # search for row with provided id
     try:
         # take first row matching id
-        row = brasil_data_buffer_gdf[brasil_data_buffer_gdf['id']==id].iloc[0]
+        row = brasil_data_buffer_gdf[brasil_data_buffer_gdf[ID]==id].iloc[0]
         # temporarily update row geometry with new radius if provided
         if (custom_radius != radius): 
             custom_radius_in_deg = custom_radius/float(deg_to_meters_lat_minus_seven) 
@@ -347,14 +348,17 @@ def api_id():
             <ul>
             <li>Map centered on (Lat, Lng) = ({}, {})</li>
             <li>Radius = {} m</li>
+            <li>Max cloud cover = {}%</li>
             <li>Reference date: {}</li>
             <li>'Before' date: {} ({} days before reference date)</li>
             <li>'After' date: {} ({} days after reference date)</li>
             </ul>
         </body>
         </html>
-    """.format(redirect_delay, base_url, row[LAT], row[LONG], custom_radius, row['VIEW_DATE'], 
-            row['UNIX_TIMES'][2], custom_days_before_date, row['UNIX_TIMES'][3], custom_days_after_date)
+    """.format(redirect_delay, base_url, row[LAT], row[LONG], 
+            custom_radius, custom_cloud_cover, row['VIEW_DATE'], 
+            row['UNIX_TIMES'][2], custom_days_before_date, 
+            row['UNIX_TIMES'][3], custom_days_after_date)
     return (page_content)
 
 ##################
