@@ -40,7 +40,7 @@ zoom_level=app.config['DEFAULT_ZOOM']
 LAT = app.config['LAT_COLUMN']
 LONG = app.config['LONG_COLUMN']
 ID = app.config['ID_COLUMN']
-REFERENCE_DATE = ['REFERENCE_DATE_COLUMN']
+REFERENCE_DATE = app.config['REFERENCE_DATE_COLUMN']
 days_before_date = app.config['DAYS_BEFORE_REFERENCE_DATE']
 days_after_date = app.config['DAYS_AFTER_REFERENCE_DATE']
 radius = app.config['DEFAULT_RADIUS']
@@ -235,9 +235,9 @@ def load_csv(input_file=database_file_base_name):
 
     app.logger.info('2 - Building dates columns')
     # Dates columns
-    df['VIEW_DATE'] = df['VIEW_DATE'].apply(lambda row: datetime.datetime.strptime(row, '%Y-%m-%d'))
-    # inserting the UNIX_TIMES (2WeeksPrior, ViewDate) into the dataframe after the VIEW_DATE column
-    df.insert(4, 'UNIX_TIMES', df.apply(lambda row: create_times(row['VIEW_DATE']), axis=1))
+    df[REFERENCE_DATE] = df[REFERENCE_DATE].apply(lambda row: datetime.datetime.strptime(row, '%Y-%m-%d'))
+    # inserting the UNIX_TIMES (X days prior, y days after) into the dataframe after the REFERENCE_DATE column
+    df.insert(4, 'UNIX_TIMES', df.apply(lambda row: create_times(row[REFERENCE_DATE]), axis=1))
 
     app.logger.info('3a - Building Wkt column - Point geom')
     geometry = [Point(xy) for xy in zip(df[LAT], df[LONG])]
@@ -266,8 +266,8 @@ def home():
 
 @app.route('/rebuild', methods=['GET'])
 def db_rebuild():
-    global brasil_data_buffer_gdf
-    brasil_data_buffer_gdf = load_database(force_csv=True)
+    global db_gdf
+    db_gdf = load_database(force_csv=True)
     return '''<h1>Planet Hack 2020</h1>
     <p>Pickled database rebuilt from CSV</p>'''
 
@@ -321,14 +321,14 @@ def api_id():
     # search for row with provided id
     try:
         # take first row matching id
-        row = brasil_data_buffer_gdf[brasil_data_buffer_gdf[ID]==id].iloc[0]
+        row = db_gdf[db_gdf[ID]==id].iloc[0]
         # temporarily update row geometry with new radius if provided
         if (custom_radius != radius): 
             custom_radius_in_deg = custom_radius/float(deg_to_meters_lat_minus_seven) 
             row['geometry'] = Point(row[LAT], row[LONG]).buffer(custom_radius_in_deg)
             row['wkt'] = row['geometry'].simplify(simplification_threshold).wkt.replace(' ','')
         if (custom_days_before_date != days_before_date) or (custom_days_after_date != days_after_date):
-            row['UNIX_TIMES'] = create_times(row['VIEW_DATE'], custom_days_before_date, custom_days_after_date)
+            row['UNIX_TIMES'] = create_times(row[REFERENCE_DATE], custom_days_before_date, custom_days_after_date)
         # compute redirect URL from default and updated parameters
         base_url = compute_url(row, max_cloud_cover=custom_cloud_cover)
     except Exception as e:
@@ -367,7 +367,7 @@ def api_id():
 #                #
 ##################
 
-brasil_data_buffer_gdf = load_database()
+db_gdf = load_database()
 
 if __name__ == '__main__':
 
