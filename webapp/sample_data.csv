@@ -1,4 +1,4 @@
-,CLASSNAME,VIEW_DATE,AREAUCKM,AREAMUNKM,MUNICIPALI,UF,LAT,LONG,URL_NEW
-12719,BURNING SCAR,03/09/2020,7.809546108,7.809546108,Canaa dos Carajas,PA,-50.4562,-6.3556,https://PlanetHack2020Deforestation.pythonanywhere.com/api/v1/notice?id=12719
-57865,DEFORESTATION_CR,27/07/2020,0,0.815044466,Altamira,PA,-55.1294,-7.48811,https://PlanetHack2020Deforestation.pythonanywhere.com/api/v1/notice?id=57865
-163496,DEFORESTATION_CR,25/06/2020,0,3.04882942,Feliz Natal,MT,-54.0208,-12.0592,https://PlanetHack2020Deforestation.pythonanywhere.com/api/v1/notice?id=163496
+UNIQUE_ID,VIEW_DATE,LAT,LONG,URL_NEW
+"1","2020-09-03","-50.4562","-6.3556","http://127.0.0.1:5001/api/v1/notice?id=1"
+"2","2020-07-27","-55.1294","-7.48811","http://127.0.0.1:5001/api/v1/notice?id=2"
+"3","2020-06-25","-54.0208","-12.0592","http://127.0.0.1:5001/api/v1/notice?id=3"

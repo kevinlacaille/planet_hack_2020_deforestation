@@ -3,8 +3,8 @@
 * Python (tested with 3.7)
 * virtualenv + virtualenvwrapper
 * flask + geopandas + python-dotenv (listed in `requirements.txt`)
-* a CSV file containing at least the following columns
-    * `id`: unique id for the observation, used for lookup with the `?id=` URL param
+* a CSV file containing at least the following columns (column names can be changed in config file)
+    * `UNIQUE_ID`: unique id for the observation, used for lookup with the `?id=` URL param
     * `VIEW_DATE`: initial observation date (YYYY-MM-DD)
     * `LAT`: longitude, WGS84/EPSG:4326
     * `LONG`: longitude, WGS84/EPSG:4326
@@ -32,7 +32,7 @@ export FLASK_SECRET_KEY=<your_own_secret_key>
 
 ## Defining CSV file name to load
 
-Edit `DATABASE_FILE_BASENAME` in `web_app_config.cfg` to use your own data
+Edit `DATABASE_FILE_BASENAME`, `ID_COLUMN`, `LAT_COLUMN` and `LONG_COLUMN` in `web_app_config.cfg` to use your own data
 
 # Running the application locally
 
