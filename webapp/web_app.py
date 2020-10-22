@@ -192,8 +192,8 @@ def get_image_ids(coord_list, earlier_time, later_time, max_cloud_cover=default_
 
     # filter by % of interesection with AOI
     aoi = shape(json_geometry)
-    filter = [(aoi.intersection(shape(feature['geometry'])).area/aoi.area > intersection_filter/100) for feature in search_result.json()['features']]
-    filtered_ids = [i for (i, v) in zip(image_ids, filter) if v]
+    ratio = [aoi.intersection(shape(feature['geometry'])).area/aoi.area for feature in search_result.json()['features']]
+    filtered_ids = [i for (i, v) in zip(image_ids, ratio) if v >= intersection_filter/100]
 
     app.logger.info(search_result.status_code)
 
