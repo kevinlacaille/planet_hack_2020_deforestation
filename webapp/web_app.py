@@ -20,7 +20,7 @@ import sys
 from dotenv import load_dotenv
 import geopandas as gpd
 import pandas as pd
-from shapely.geometry import Point
+from shapely.geometry import Point, shape
 
 # create Flask app
 app = flask.Flask(__name__)
@@ -41,6 +41,7 @@ LAT = app.config['LAT_COLUMN']
 LONG = app.config['LONG_COLUMN']
 ID = app.config['ID_COLUMN']
 REFERENCE_DATE = app.config['REFERENCE_DATE_COLUMN']
+intersection_filter = app.config['INTERSECTION_FILTER']
 days_before_date = app.config['DAYS_BEFORE_REFERENCE_DATE']
 days_after_date = app.config['DAYS_AFTER_REFERENCE_DATE']
 radius = app.config['DEFAULT_RADIUS']
@@ -189,9 +190,14 @@ def get_image_ids(coord_list, earlier_time, later_time, max_cloud_cover=default_
 
     image_ids = [feature['id'] for feature in search_result.json()['features']]
 
+    # filter by % of interesection with AOI
+    aoi = shape(json_geometry)
+    filter = [(shape(feature['geometry']).intersection(aoi).area/aoi.area > intersection_filter/100) for feature in search_result.json()['features']]
+    filtered_ids = [i for (i, v) in zip(image_ids, filter) if v]
+
     app.logger.info(search_result.status_code)
 
-    return sorted(image_ids, reverse=True)
+    return sorted(filtered_ids, reverse=True)
 
 def get_bands_string(image_ids):
     strings = []
