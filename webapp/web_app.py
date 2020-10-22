@@ -192,7 +192,7 @@ def get_image_ids(coord_list, earlier_time, later_time, max_cloud_cover=default_
 
     # filter by % of interesection with AOI
     aoi = shape(json_geometry)
-    filter = [(shape(feature['geometry']).intersection(aoi).area/aoi.area > intersection_filter/100) for feature in search_result.json()['features']]
+    filter = [(aoi.intersection(shape(feature['geometry'])).area/aoi.area > intersection_filter/100) for feature in search_result.json()['features']]
     filtered_ids = [i for (i, v) in zip(image_ids, filter) if v]
 
     app.logger.info(search_result.status_code)
@@ -362,6 +362,7 @@ def api_id():
             <li>Map centered on (Lat, Lng) = ({}, {})</li>
             <li>Radius = {} m</li>
             <li>Max cloud cover = {}%</li>
+            <li>Min footprint intersection with AOI = {}%</li>
             <li>Reference date: {}</li>
             <li>'Before' date: {} ({} days before reference date)</li>
             <li>'After' date: {} ({} days after reference date)</li>
@@ -369,7 +370,7 @@ def api_id():
         </body>
         </html>
     """.format(redirect_delay, base_url, row[LAT], row[LONG], 
-            custom_radius, custom_cloud_cover, row['VIEW_DATE'], 
+            custom_radius, custom_cloud_cover, intersection_filter, row['VIEW_DATE'], 
             row['UNIX_TIMES'][2], custom_days_before_date, 
             row['UNIX_TIMES'][3], custom_days_after_date)
     return (page_content)
