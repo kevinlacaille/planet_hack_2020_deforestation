@@ -159,10 +159,17 @@ def get_image_ids(coord_list, earlier_time, later_time, max_cloud_cover=default_
       }
     }
 
+    # only 'finalized' images
+    finalized_filter = {  
+        "type":"StringInFilter",
+        "field_name":"publishing_stage",
+        "config":["finalized"]
+        }
+    
     # combine our geo, date, cloud filters
     combined_filter = {
       "type": "AndFilter",
-      "config": [geometry_filter, date_range_filter, cloud_cover_filter]      # Rmove
+      "config": [geometry_filter, date_range_filter, cloud_cover_filter, finalized_filter]      # Rmove
     }
 
     item_type = "PSScene4Band"
