@@ -370,7 +370,7 @@ def api_id():
         </body>
         </html>
     """.format(redirect_delay, base_url, row[LAT], row[LONG], 
-            custom_radius, custom_cloud_cover, intersection_filter, row['VIEW_DATE'], 
+            custom_radius, custom_cloud_cover, intersection_filter, row[REFERENCE_DATE], 
             row['UNIX_TIMES'][2], custom_days_before_date, 
             row['UNIX_TIMES'][3], custom_days_after_date)
     return (page_content)

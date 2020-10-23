@@ -32,7 +32,7 @@ export FLASK_SECRET_KEY=<your_own_secret_key>
 
 ## Defining CSV file name to load
 
-Edit `DATABASE_FILE_BASENAME`, `ID_COLUMN`, `LAT_COLUMN` and `LONG_COLUMN` in `web_app_config.cfg` to use your own data
+Edit `DATABASE_FILE_BASENAME`, `ID_COLUMN`, `REFERENCE_DATE`, `LAT_COLUMN` and `LONG_COLUMN` in `web_app_config.cfg` to use your own data structure
 
 # Running the application locally
 
