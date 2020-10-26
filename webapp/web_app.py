@@ -18,7 +18,7 @@ from requests.auth import HTTPBasicAuth
 import time
 import sys
 
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv, set_key
 import geopandas as gpd
 import pandas as pd
 from shapely.geometry import Point, shape
@@ -35,6 +35,7 @@ logging_file_name = app.config['LOGGING_FILE_NAME']
 logging_file_size = app.config['LOGGING_FILE_SIZE']
 logging_file_count = app.config['LOGGING_FILE_COUNT']
 logging_file_level = app.config['LOGGING_FILE_LEVEL']
+setenv_enabled = app.config['SETENV_ENABLED']
 database_file_base_name = app.config['DATABASE_FILE_BASENAME']
 redirect_delay = app.config['REDIRECT_DELAY']
 explorer_base_url=app.config['EXPLORER_BASE_URL']
@@ -295,6 +296,24 @@ def home():
     <h1>Planet Hack 2020</h1>
     <p>URL resolver for Google Sheet data.</p>
     ''')
+
+@app.route('/setenv', methods=['GET'])
+def dotenv_set():
+    global PLANET_API_KEY
+    if setenv_enabled == False:
+        return html_base.format("<p>Error: SETENV_ENABLED is currently set to False.</p>")  
+    else:
+        if 'PL_API_KEY' in request.args:
+            try:
+                PLANET_API_KEY = request.args['PL_API_KEY']
+                status = set_key(find_dotenv(), 'PL_API_KEY', PLANET_API_KEY)
+                app.logger.info('A new Planet API key has been set')
+                return(html_base.format('<p>A new Planet API key has been set<p>'))
+            except Exception as e:
+                app.logger.warning(e)
+                return html_base.format("<p>Error: Unable to define new Planet API Key.</p>")        
+        else:
+            return html_base.format("<p>Error: Unable to find a supported dotenv parameter.</p>")  
 
 @app.route('/rebuild', methods=['GET'])
 def db_rebuild():
