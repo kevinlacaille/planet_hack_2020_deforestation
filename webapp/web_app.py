@@ -359,7 +359,7 @@ def api_id():
         # temporarily update row geometry with new radius if provided
         if (custom_radius != radius):
             custom_radius_in_deg = custom_radius/float(one_degree_lat_as_meters(lat=row[LAT])) 
-            row['geometry'] = Point(row[LAT], row[LONG]).buffer(custom_radius_in_deg)
+            row['geometry'] = Point(row[LONG], row[LAT]).buffer(custom_radius_in_deg)
             row['wkt'] = row['geometry'].simplify(simplification_threshold).wkt.replace(' ','')
         if (custom_days_before_date != days_before_date) or (custom_days_after_date != days_after_date):
             row['UNIX_TIMES'] = create_times(row[REFERENCE_DATE], custom_days_before_date, custom_days_after_date)
@@ -368,7 +368,7 @@ def api_id():
     except Exception as e:
         app.logger.warning(e)
         return html_base.format("<p>Error: Non existing id or unexpected error.</p>")
-
+ 
     # page_content = '<a href="{}">Go to Planet Explorer site</a>'.format(base_url)
     page_content = """
         <!DOCTYPE html>
