@@ -22,6 +22,7 @@ from dotenv import load_dotenv
 import geopandas as gpd
 import pandas as pd
 from shapely.geometry import Point, shape
+from geopy import distance
 
 # create Flask app
 app = flask.Flask(__name__)
@@ -76,8 +77,6 @@ app.logger.addHandler(handler)
 # Global variables
 seconds_per_day = 86400                                                 # used by create_times
 millisecs_per_day = seconds_per_day * 1000                              # used by create_times
-deg_to_meters_lat_minus_seven = 110590                                  # used by create_buffer
-radius_in_deg = radius/float(deg_to_meters_lat_minus_seven)             # used by create_buffer
 
 # utility functions
 
@@ -110,13 +109,20 @@ def get_time_from_id(image_id):
     time_in_ms = calendar.timegm(date.timetuple()) * 1000
     return time_in_ms
 
+def one_degree_lat_as_meters(lat=0.0):
+    # take 2 points 0.5° higher/lower than reference, compute distance in meters using best method in GeoPy (currently geodetic)
+    point1 = (0.0, lat + 0.5)
+    point2 = (0.0, lat - 0.5)
+    return distance.distance(point1, point2).m
+
 def create_buffer(row):
     '''
     Takes in a geodataframe row, and returns the row with a new geometry (x km circle around LAT,LONG).
     '''
-    dist = radius_in_deg
+    deg_to_meters = one_degree_lat_as_meters(lat=row[LAT])                          
+    radius_in_deg = radius/float(deg_to_meters)             
     point = row["geometry"]
-    row["geometry"] = point.buffer(dist)
+    row["geometry"] = point.buffer(radius_in_deg)
     return row
 
 def get_coord_list(geo_row):
@@ -351,8 +357,8 @@ def api_id():
         # take first row matching id
         row = db_gdf[db_gdf[ID]==id].iloc[0]
         # temporarily update row geometry with new radius if provided
-        if (custom_radius != radius): 
-            custom_radius_in_deg = custom_radius/float(deg_to_meters_lat_minus_seven) 
+        if (custom_radius != radius):
+            custom_radius_in_deg = custom_radius/float(one_degree_lat_as_meters(lat=row[LAT])) 
             row['geometry'] = Point(row[LAT], row[LONG]).buffer(custom_radius_in_deg)
             row['wkt'] = row['geometry'].simplify(simplification_threshold).wkt.replace(' ','')
         if (custom_days_before_date != days_before_date) or (custom_days_after_date != days_after_date):
