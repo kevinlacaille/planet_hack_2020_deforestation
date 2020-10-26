@@ -6,6 +6,7 @@ from logging.handlers import TimedRotatingFileHandler
 
 import flask
 from flask import request, redirect
+from flask_debugtoolbar import DebugToolbarExtension
 
 import calendar
 from collections import namedtuple
@@ -59,6 +60,10 @@ if SECRET_KEY is None:
     app.logger.error('Env variable FLASK_SECRET_KEY is not defined. Please set it with a custom secret value in ./.env')
     sys.exit(1)
 app.config['SECRET_KEY'] = SECRET_KEY
+
+# debug toolbar will only appear when Debug = True (needs to be after SECRET_KEY and DEBUG are set)
+app.debug = debug_mode
+toolbar = DebugToolbarExtension(app)
 
 # configure logging according to settings defined in config file
 formatter = logging.Formatter(
@@ -272,17 +277,27 @@ def load_csv(input_file=database_file_base_name):
 
 # Flask request handling functions
 
+html_base = '''
+    <html><body>
+    {}
+    </body></html>
+'''
+
 @app.route('/', methods=['GET'])
 def home():
-    return '''<h1>Planet Hack 2020</h1>
-    <p>URL resolver for Google Sheet data.</p>'''
+    return html_base.format('''
+    <h1>Planet Hack 2020</h1>
+    <p>URL resolver for Google Sheet data.</p>
+    ''')
 
 @app.route('/rebuild', methods=['GET'])
 def db_rebuild():
     global db_gdf
     db_gdf = load_database(force_csv=True)
-    return '''<h1>Planet Hack 2020</h1>
-    <p>Pickled database rebuilt from CSV</p>'''
+    return html_base.format('''
+    <h1>Planet Hack 2020</h1>
+    <p>Pickled database rebuilt from CSV</p>
+    ''')
 
 @app.route('/api/v1/notice', methods=['GET'])
 def api_id():
@@ -305,7 +320,7 @@ def api_id():
         app.logger.info('Incoming request with id {}'.format(id))
     else:
         app.logger.warning('Incoming request with no id param')
-        return "Error: No id field provided. Please specify an id."
+        return html_base.format("<p>Error: No id field provided. Please specify an id.<p>")
 
     # handle radius optional parameter
     if 'rm' in request.args:
@@ -346,7 +361,7 @@ def api_id():
         base_url = compute_url(row, max_cloud_cover=custom_cloud_cover)
     except Exception as e:
         app.logger.warning(e)
-        return "Error: Non existing id or unexpected error."
+        return html_base.format("<p>Error: Non existing id or unexpected error.</p>")
 
     # page_content = '<a href="{}">Go to Planet Explorer site</a>'.format(base_url)
     page_content = """
