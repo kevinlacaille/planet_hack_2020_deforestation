@@ -53,7 +53,7 @@ You can hit `/rebuild` at any time to force the reconstruction from the CSV file
 
 Open your web browser and go to [http://127.0.0.1:5001/api/v1/notice?id=1](http://127.0.0.1:5001/api/v1/notice?id=1). You should be redirected to a Planet Explore page centered on the `LAT`, `LONG` defined for `id`=1, and a window period defined around the `VIEW_DATE` value. 
 
-## Available routes and parameters
+# Available routes and parameters
 
 * `/`: home page, basically a project banner
 * `/setenv`: if enabled, provides remote access to change Planet API Key
@@ -70,3 +70,7 @@ Open your web browser and go to [http://127.0.0.1:5001/api/v1/notice?id=1](http:
         - `da`: number of Days After date in database for end of image search period (int)
         - `cc`: max Cloud Cover accepted (int, 0 to 100)
     * full example: `GET /api/v1/notice?id=1&rm=5000&sh=ci&db=14&da=28&cc=25`
+
+# Available configuration parameters
+
+* see `web_app_config.cfg` file content
