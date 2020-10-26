@@ -253,7 +253,7 @@ def load_csv(input_file=database_file_base_name):
     df.insert(4, 'UNIX_TIMES', df.apply(lambda row: create_times(row[REFERENCE_DATE]), axis=1))
 
     app.logger.info('3a - Building Wkt column - Point geom')
-    geometry = [Point(xy) for xy in zip(df[LAT], df[LONG])]
+    geometry = [Point(xy) for xy in zip(df[LONG], df[LAT])]
     gdf = gpd.GeoDataFrame(df, geometry=geometry)
     gdf.crs = 'epsg:4326'
 
