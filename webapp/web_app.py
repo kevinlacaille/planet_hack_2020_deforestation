@@ -48,6 +48,7 @@ intersection_filter = app.config['INTERSECTION_FILTER']
 days_before_date = app.config['DAYS_BEFORE_REFERENCE_DATE']
 days_after_date = app.config['DAYS_AFTER_REFERENCE_DATE']
 radius = app.config['DEFAULT_RADIUS']
+aoi_shape = app.config['AOI_SHAPE']
 simplification_threshold = app.config['SIMPLIFICATION_THRESHOLD']
 default_cloud_cover = app.config['MAX_CLOUD_COVER']
 
@@ -116,14 +117,20 @@ def one_degree_lat_as_meters(lat=0.0):
     point2 = (0.0, lat - 0.5)
     return distance.distance(point1, point2).m
 
-def create_buffer(row):
+def create_buffer(row, shape='circle'):
     '''
-    Takes in a geodataframe row, and returns the row with a new geometry (x km circle around LAT,LONG).
+    Takes in a geodataframe row, and returns the row with a new geometry (radius-based 'circle' or 'square' around row['geometry']).
     '''
     deg_to_meters = one_degree_lat_as_meters(lat=row[LAT])                          
     radius_in_deg = radius/float(deg_to_meters)             
     point = row["geometry"]
-    row["geometry"] = point.buffer(radius_in_deg)
+    if shape=='circle':
+        row["geometry"] = point.buffer(radius_in_deg)
+    elif shape=='square':
+        row["geometry"] = point.buffer(radius_in_deg).envelope
+    else:
+        logging.warning('Invalid {} shape value'.format(shape))
+        row["geometry"] = None
     return row
 
 def get_coord_list(geo_row):
@@ -270,7 +277,7 @@ def load_csv(input_file=database_file_base_name):
     gdf.crs = 'epsg:4326'
 
     app.logger.info('3b - Building Wkt column - Buffered geom')
-    gdf = gdf.apply(create_buffer,axis=1)
+    gdf = gdf.apply(create_buffer, shape=aoi_shape, axis=1)
     gdf.crs = 'epsg:4326'
 
     app.logger.info('3c - Building Wkt column - geom to wkt conversion')
@@ -331,7 +338,8 @@ def api_id():
     mandatory params:
     - id: unique id of a row (int)
     optional params:
-    - rm: Radius in Meters around the coordinates to create circle (int)
+    - rm: Radius in Meters around the coordinates to create circle or share shape (int)
+    - sh: 'ci' or 'sq': 'circle' or 'square' shape centered on point (string)
     - db: number of Days Before date in database for beginning of image search period (int)
     - da: number of Days After date in database for end of image search period (int)
     - cc: max cloud cover accepted (int, 0 to 100)
@@ -352,6 +360,16 @@ def api_id():
         custom_radius = int(request.args['rm'])
     else:
         custom_radius = radius
+
+    # handle shape optional parameter
+    shapes = {
+        'ci': 'circle', 
+        'sq': 'square'
+    }
+    if 'sh' in request.args:
+        custom_shape = shapes[request.args['sh']]
+    else:
+        custom_shape = aoi_shape
 
     # handle "days before" optional parameter
     if 'db' in request.args:
@@ -376,9 +394,15 @@ def api_id():
         # take first row matching id
         row = db_gdf[db_gdf[ID]==id].iloc[0]
         # temporarily update row geometry with new radius if provided
-        if (custom_radius != radius):
-            custom_radius_in_deg = custom_radius/float(one_degree_lat_as_meters(lat=row[LAT])) 
-            row['geometry'] = Point(row[LONG], row[LAT]).buffer(custom_radius_in_deg)
+        if (custom_radius != radius) or (custom_shape != aoi_shape):
+            custom_radius_in_deg = custom_radius/float(one_degree_lat_as_meters(lat=row[LAT]))
+            if custom_shape == 'circle': 
+                row['geometry'] = Point(row[LONG], row[LAT]).buffer(custom_radius_in_deg)
+            elif custom_shape == 'square':
+                row['geometry'] = Point(row[LONG], row[LAT]).buffer(custom_radius_in_deg).envelope
+            else:
+                logging.warning('Invalid {} shape value'.format(shape))
+                row["geometry"] = None
             row['wkt'] = row['geometry'].simplify(simplification_threshold).wkt.replace(' ','')
         if (custom_days_before_date != days_before_date) or (custom_days_after_date != days_after_date):
             row['UNIX_TIMES'] = create_times(row[REFERENCE_DATE], custom_days_before_date, custom_days_after_date)
@@ -400,7 +424,7 @@ def api_id():
             <p>Redirecting to Planet Explorer site with the following settings:</p>
             <ul>
             <li>Map centered on (Lat, Lng) = ({}, {})</li>
-            <li>Radius = {} m</li>
+            <li>Radius = {} m, shape = {}</li>
             <li>Max cloud cover = {}%</li>
             <li>Min footprint intersection with AOI = {}%</li>
             <li>Reference date: {}</li>
@@ -409,8 +433,8 @@ def api_id():
             </ul>
         </body>
         </html>
-    """.format(redirect_delay, base_url, row[LAT], row[LONG], 
-            custom_radius, custom_cloud_cover, intersection_filter, row[REFERENCE_DATE], 
+    """.format(redirect_delay, base_url, row[LAT], row[LONG], custom_radius, custom_shape, 
+            custom_cloud_cover, intersection_filter, row[REFERENCE_DATE], 
             row['UNIX_TIMES'][2], custom_days_before_date, 
             row['UNIX_TIMES'][3], custom_days_after_date)
     return (page_content)
