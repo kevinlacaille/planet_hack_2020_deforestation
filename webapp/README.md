@@ -51,9 +51,7 @@ You can hit `/rebuild` at any time to force the reconstruction from the CSV file
 
 ## Testing if the application is working
 
-Open your web browser and go to [http://127.0.0.1:5001/api/v1/notice?id=1](http://127.0.0.1:5001/api/v1/notice?id=1). You should be redirected to a Planet Explore page centered on the `LAT`, `LONG` defined for `id`=202, and a window period defined around the `VIEW_DATE` value. 
-
-UPDATE 2020-10-20: Added rm (radius in meters), db (days before), da (days after), cc (cloud cover) optional parameters. Example: /api/v1/notice?id=1&rm=7000&db=5&da=10&cc=75
+Open your web browser and go to [http://127.0.0.1:5001/api/v1/notice?id=1](http://127.0.0.1:5001/api/v1/notice?id=1). You should be redirected to a Planet Explore page centered on the `LAT`, `LONG` defined for `id`=1, and a window period defined around the `VIEW_DATE` value. 
 
 ## Available routes and parameters
 
@@ -67,8 +65,8 @@ UPDATE 2020-10-20: Added rm (radius in meters), db (days before), da (days after
         - `id`: unique id of a row (int)
     * optional params:
         - `rm`: Radius in Meters around the coordinates to create circle or share shape (int)
-        - `sh`: `ci` or `sq`: 'circle' or 'square' shape centered on point (string)
+        - `sh`: `ci` or `sq`: 'CIrcle' or 'SQuare' SHape centered on point (string)
         - `db`: number of Days Before date in database for beginning of image search period (int)
         - `da`: number of Days After date in database for end of image search period (int)
-        - `cc`: max cloud cover accepted (int, 0 to 100)
+        - `cc`: max Cloud Cover accepted (int, 0 to 100)
     * full example: `GET /api/v1/notice?id=1&rm=5000&sh=ci&db=14&da=28&cc=25`
