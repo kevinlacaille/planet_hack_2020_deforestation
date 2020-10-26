@@ -30,6 +30,8 @@ export PL_API_KEY=<your_api_key>
 export FLASK_SECRET_KEY=<your_own_secret_key>
 ```
 
+The Planet API key can be remotely changed using the `/setenv?PL_API_KEY=<your_api_key>` route, provided that `SETENV_ENABLED` is set to `True`in the .cfg file
+
 ## Defining CSV file name to load
 
 Edit `DATABASE_FILE_BASENAME`, `ID_COLUMN`, `REFERENCE_DATE`, `LAT_COLUMN` and `LONG_COLUMN` in `web_app_config.cfg` to use your own data structure
@@ -49,6 +51,24 @@ You can hit `/rebuild` at any time to force the reconstruction from the CSV file
 
 ## Testing if the application is working
 
-Open your web browser and go to [http://127.0.0.1:5001/api/v1/notice?id=202](http://127.0.0.1:5001/api/v1/notice?id=202). You should be redirected to a Planet Explore page centered on the `LAT`, `LONG` defined for `id`=202, and a window period defined around the `VIEW_DATE` value. 
+Open your web browser and go to [http://127.0.0.1:5001/api/v1/notice?id=1](http://127.0.0.1:5001/api/v1/notice?id=1). You should be redirected to a Planet Explore page centered on the `LAT`, `LONG` defined for `id`=202, and a window period defined around the `VIEW_DATE` value. 
 
-UPDATE 2020-10-20: Added rm (radius in meters), db (days before), da (days after), cc (cloud cover) optional parameters. Example: /api/v1/notice?id=202&rm=7000&db=5&da=10&cc=75
+UPDATE 2020-10-20: Added rm (radius in meters), db (days before), da (days after), cc (cloud cover) optional parameters. Example: /api/v1/notice?id=1&rm=7000&db=5&da=10&cc=75
+
+## Available routes and parameters
+
+* `/`: home page, basically a project banner
+* `/setenv`: if enabled, provides remote access to change Planet API Key
+    * example: `GET /setenv?PL_API_KEY=<your_api_key>`
+* `/rebuild`: forces reconstruction of the pickled dataframe used a cache from an input CSV. Useful if CSV file has been updated or if global parameters have been modified
+    * example: `GET /rebuild`
+* `/api/v1/notice`: main route of the application
+    * mandatory params:
+        - `id`: unique id of a row (int)
+    * optional params:
+        - `rm`: Radius in Meters around the coordinates to create circle or share shape (int)
+        - `sh`: `ci` or `sq`: 'circle' or 'square' shape centered on point (string)
+        - `db`: number of Days Before date in database for beginning of image search period (int)
+        - `da`: number of Days After date in database for end of image search period (int)
+        - `cc`: max cloud cover accepted (int, 0 to 100)
+    * full example: `GET /api/v1/notice?id=1&rm=5000&sh=ci&db=14&da=28&cc=25`
