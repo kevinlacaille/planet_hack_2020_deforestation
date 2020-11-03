@@ -44,6 +44,7 @@ LAT = app.config['LAT_COLUMN']
 LONG = app.config['LONG_COLUMN']
 ID = app.config['ID_COLUMN']
 REFERENCE_DATE = app.config['REFERENCE_DATE_COLUMN']
+REFERENCE_DATE_FORMAT = app.config['REFERENCE_DATE_FORMAT']
 intersection_filter = app.config['INTERSECTION_FILTER']
 days_before_date = app.config['DAYS_BEFORE_REFERENCE_DATE']
 days_after_date = app.config['DAYS_AFTER_REFERENCE_DATE']
@@ -267,7 +268,7 @@ def load_csv(input_file=database_file_base_name):
 
     app.logger.info('2 - Building dates columns')
     # Dates columns
-    df[REFERENCE_DATE] = df[REFERENCE_DATE].apply(lambda row: datetime.datetime.strptime(row, '%Y-%m-%d'))
+    df[REFERENCE_DATE] = df[REFERENCE_DATE].apply(lambda row: datetime.datetime.strptime(row, REFERENCE_DATE_FORMAT))
     # inserting the UNIX_TIMES (X days prior, y days after) into the dataframe after the REFERENCE_DATE column
     df.insert(4, 'UNIX_TIMES', df.apply(lambda row: create_times(row[REFERENCE_DATE]), axis=1))
 
