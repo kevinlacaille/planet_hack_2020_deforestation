@@ -34,7 +34,7 @@ The Planet API key can be remotely changed using the `/setenv?PL_API_KEY=<your_a
 
 ## Defining CSV file name to load
 
-Edit `DATABASE_FILE_BASENAME`, `ID_COLUMN`, `REFERENCE_DATE`, `LAT_COLUMN` and `LONG_COLUMN` in `web_app_config.cfg` to use your own data structure
+Edit `DATABASE_FILE_BASENAME`, `ID_COLUMN`, `REFERENCE_DATE`, `REFERENCE_DATE_FORMAT`, `LAT_COLUMN` and `LONG_COLUMN` in `web_app_config.cfg` to use your own data structure
 
 # Running the application locally
 
