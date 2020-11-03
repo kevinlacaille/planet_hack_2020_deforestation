@@ -384,7 +384,7 @@ def api_id():
     else:
         custom_days_after_date = days_after_date
 
-    # handle "days before" optional parameter
+    # handle "cloud cover" optional parameter
     if 'cc' in request.args:
         custom_cloud_cover = int(request.args['cc'])
     else:
