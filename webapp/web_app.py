@@ -239,7 +239,7 @@ def compute_url(row, max_cloud_cover=default_cloud_cover):
     id_date_right = get_time_from_id(image_ids[0])
     band_strings = get_bands_string(image_ids)
     base_url = "{}/{},{}/zoom/{}/dates/{}..{}/geometry/{}/items/{}/comparing/result::PSScene4Band:{},result::PSScene4Band:{}".format(
-                                explorer_base_url,lat_s,lng_s,zoom_level,date_left,date_right,row['wkt'],band_strings,id_date_left,id_date_right)
+                                explorer_base_url,lng_s,lat_s,zoom_level,date_left,date_right,row['wkt'],band_strings,id_date_left,id_date_right)
     return base_url
 
 def load_database(input_file=database_file_base_name, force_csv=False):
