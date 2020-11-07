@@ -235,11 +235,14 @@ def compute_url(row, max_cloud_cover=default_cloud_cover):
     date_left = row['UNIX_TIMES'][2]
     date_right = row['UNIX_TIMES'][3]
     image_ids = get_image_ids(get_coord_list(row['geometry']), date_left, date_right, max_cloud_cover=max_cloud_cover)
+    if len(image_ids):
     id_date_left = get_time_from_id(image_ids[-1])
     id_date_right = get_time_from_id(image_ids[0])
     band_strings = get_bands_string(image_ids)
     base_url = "{}/{},{}/zoom/{}/dates/{}..{}/geometry/{}/items/{}/comparing/result::PSScene4Band:{},result::PSScene4Band:{}".format(
                                 explorer_base_url,lng_s,lat_s,zoom_level,date_left,date_right,row['wkt'],band_strings,id_date_left,id_date_right)
+    else:
+        base_url = None
     return base_url
 
 def load_database(input_file=database_file_base_name, force_csv=False):
@@ -350,8 +353,8 @@ def api_id():
     # If ID is provided and exists, redirect to Planet Explorer
     # If no ID is provided, display an error in the browser.
     if 'id' in request.args:
-        id = int(request.args['id'])
-        app.logger.info('Incoming request with id {}'.format(id))
+        uid = int(request.args['id'])
+        app.logger.info('Incoming request with id {}'.format(uid))
     else:
         app.logger.warning('Incoming request with no id param')
         return html_base.format("<p>Error: No id field provided. Please specify an id.<p>")
@@ -393,7 +396,7 @@ def api_id():
     # search for row with provided id
     try:
         # take first row matching id
-        row = db_gdf[db_gdf[ID]==id].iloc[0]
+        row = db_gdf[db_gdf[ID]==uid].iloc[0]
         # temporarily update row geometry with new radius if provided
         if (custom_radius != radius) or (custom_shape != aoi_shape):
             custom_radius_in_deg = custom_radius/float(one_degree_lat_as_meters(lat=row[LAT]))
@@ -413,6 +416,7 @@ def api_id():
         app.logger.warning(e)
         return html_base.format("<p>Error: Non existing id or unexpected error.</p>")
  
+    if base_url:
     # page_content = '<a href="{}">Go to Planet Explorer site</a>'.format(base_url)
     page_content = """
         <!DOCTYPE html>
@@ -438,6 +442,15 @@ def api_id():
             custom_cloud_cover, intersection_filter, row[REFERENCE_DATE], 
             row['UNIX_TIMES'][2], custom_days_before_date, 
             row['UNIX_TIMES'][3], custom_days_after_date)
+    else:
+         page_content = """
+            <!DOCTYPE html>
+            <html>
+            <body>
+                <p>No PlanetScope scene found matching input parameters</p>
+            </body>
+            </html>
+        """       
     return (page_content)
 
 ##################
