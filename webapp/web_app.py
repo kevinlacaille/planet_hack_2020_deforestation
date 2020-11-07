@@ -236,10 +236,10 @@ def compute_url(row, max_cloud_cover=default_cloud_cover):
     date_right = row['UNIX_TIMES'][3]
     image_ids = get_image_ids(get_coord_list(row['geometry']), date_left, date_right, max_cloud_cover=max_cloud_cover)
     if len(image_ids):
-    id_date_left = get_time_from_id(image_ids[-1])
-    id_date_right = get_time_from_id(image_ids[0])
-    band_strings = get_bands_string(image_ids)
-    base_url = "{}/{},{}/zoom/{}/dates/{}..{}/geometry/{}/items/{}/comparing/result::PSScene4Band:{},result::PSScene4Band:{}".format(
+        id_date_left = get_time_from_id(image_ids[-1])
+        id_date_right = get_time_from_id(image_ids[0])
+        band_strings = get_bands_string(image_ids)
+        base_url = "{}/{},{}/zoom/{}/dates/{}..{}/geometry/{}/items/{}/comparing/result::PSScene4Band:{},result::PSScene4Band:{}".format(
                                 explorer_base_url,lng_s,lat_s,zoom_level,date_left,date_right,row['wkt'],band_strings,id_date_left,id_date_right)
     else:
         base_url = None
@@ -285,7 +285,7 @@ def load_csv(input_file=database_file_base_name):
     gdf.crs = 'epsg:4326'
 
     app.logger.info('3c - Building Wkt column - geom to wkt conversion')
-    gdf['wkt'] = gdf.apply(lambda row: row.geometry.simplify(simplification_threshold).wkt.replace(' ',''), axis=1)
+    gdf['wkt'] = gdf.apply(lambda row: row.geometry.simplify(simplification_threshold).wkt, axis=1)
 
     app.logger.info('4 - Saving prebuilt database to pickle')
     gdf.to_pickle('{}.pkl'.format(os.path.join(database_file_base_name)))
@@ -417,31 +417,31 @@ def api_id():
         return html_base.format("<p>Error: Non existing id or unexpected error.</p>")
  
     if base_url:
-    # page_content = '<a href="{}">Go to Planet Explorer site</a>'.format(base_url)
-    page_content = """
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>HTML Meta Tag</title>
-            <meta http-equiv = "refresh" content = "{}; url = {}" />
-        </head>
-        <body>
-            <p>Redirecting to Planet Explorer site with the following settings:</p>
-            <ul>
-            <li>Map centered on (Lat, Lng) = ({}, {})</li>
-            <li>Radius = {} m, shape = {}</li>
-            <li>Max cloud cover = {}%</li>
-            <li>Min footprint intersection with AOI = {}%</li>
-            <li>Reference date: {}</li>
-            <li>'Before' date: {} ({} days before reference date)</li>
-            <li>'After' date: {} ({} days after reference date)</li>
-            </ul>
-        </body>
-        </html>
-    """.format(redirect_delay, base_url, row[LAT], row[LONG], custom_radius, custom_shape, 
-            custom_cloud_cover, intersection_filter, row[REFERENCE_DATE], 
-            row['UNIX_TIMES'][2], custom_days_before_date, 
-            row['UNIX_TIMES'][3], custom_days_after_date)
+        # page_content = '<a href="{}">Go to Planet Explorer site</a>'.format(base_url)
+        page_content = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>HTML Meta Tag</title>
+                <meta http-equiv = "refresh" content = "{}; url = {}" />
+            </head>
+            <body>
+                <p>Redirecting to Planet Explorer site with the following settings:</p>
+                <ul>
+                <li>Map centered on (Lat, Lng) = ({}, {})</li>
+                <li>Radius = {} m, shape = {}</li>
+                <li>Max cloud cover = {}%</li>
+                <li>Min footprint intersection with AOI = {}%</li>
+                <li>Reference date: {}</li>
+                <li>'Before' date: {} ({} days before reference date)</li>
+                <li>'After' date: {} ({} days after reference date)</li>
+                </ul>
+            </body>
+            </html>
+        """.format(redirect_delay, base_url, row[LAT], row[LONG], custom_radius, custom_shape, 
+                custom_cloud_cover, intersection_filter, row[REFERENCE_DATE], 
+                row['UNIX_TIMES'][2], custom_days_before_date, 
+                row['UNIX_TIMES'][3], custom_days_after_date)
     else:
          page_content = """
             <!DOCTYPE html>
